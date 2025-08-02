@@ -54,36 +54,38 @@ export class DeploymentController {
         return;
       }
 
-      // Deploy the service
-      const result = await this.deploymentService.deployCredexCore(branch);
+      // Respond immediately to avoid blocking the HTTP connection
+      res.status(202).json({
+        message: 'Deployment started successfully',
+        data: {
+          action: {
+            id: requestId,
+            type: 'DEPLOY_CORE_STARTED',
+            timestamp: new Date().toISOString(),
+            actor: 'deployment-system',
+            details: {
+              branch,
+              status: 'in_progress'
+            }
+          }
+        }
+      });
 
-      if (result.success) {
-        res.status(200).json({
-          message: result.message,
-          data: {
-            action: {
-              id: requestId,
-              type: 'DEPLOY_CORE_SUCCESS',
-              timestamp: new Date().toISOString(),
-              actor: 'deployment-system',
-              details: result.details
-            }
+      // Start deployment asynchronously (detached from HTTP request)
+      setImmediate(async () => {
+        try {
+          logger.info('Starting detached deployment process', { requestId, branch });
+          const result = await this.deploymentService.deployCredexCore(branch);
+          
+          if (result.success) {
+            logger.info('Deployment completed successfully', { requestId, result });
+          } else {
+            logger.error('Deployment failed', { requestId, result });
           }
-        });
-      } else {
-        res.status(500).json({
-          message: result.message,
-          data: {
-            action: {
-              id: requestId,
-              type: 'DEPLOY_CORE_ERROR',
-              timestamp: new Date().toISOString(),
-              actor: 'deployment-system',
-              details: result.details
-            }
-          }
-        });
-      }
+        } catch (error) {
+          logger.error('Detached deployment process error:', { requestId, error });
+        }
+      });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
