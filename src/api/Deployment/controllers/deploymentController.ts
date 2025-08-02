@@ -55,7 +55,7 @@ export class DeploymentController {
       }
 
       // Deploy the service
-      const result = await this.deploymentService.deployCredexCore(branch, commit_sha);
+      const result = await this.deploymentService.deployCredexCore(branch);
 
       if (result.success) {
         res.status(200).json({
