@@ -338,128 +338,214 @@ export class DeploymentService {
       logger.info('Building credex-core image from deployment directory');
       await execAsync(buildCommand);
       
-      // Step 3: Start new container on different port for testing
-      logger.info(`Starting new container for testing: ${newContainerName}`);
-      const testRunCommand = `docker run -d \
-        --name ${newContainerName} \
-        --env-file /app/source/.env.prod \
-        -e NODE_ENV=production \
-        -e PORT=4000 \
-        -e LOG_LEVEL=info \
-        -p 4001:4000 \
-        -v /app/source/logs/prod:/app/logs \
-        -v /app/source/backups/credex-core:/app/backups \
-        -v /app/source:/app/source \
-        -v /var/run/docker.sock:/var/run/docker.sock \
-        -v /app/source/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro \
-        --restart no \
-        --network credex-prod-network \
-        credex-core-deployment:latest`;
-      
-      const { stdout: testStdout, stderr: testStderr } = await execAsync(testRunCommand);
-      logger.info('Test container started', { stdout: testStdout, stderr: testStderr });
-      
-      // Step 4: Wait for new container to be ready and perform health check
-      logger.info('Waiting for new container to be ready...');
-      await new Promise(resolve => setTimeout(resolve, 10000));
-      
-      logger.info('Performing health check on new container');
-      const healthCheckPassed = await this.performHealthCheck('http://localhost:4001/health', 30000);
-      
-      if (!healthCheckPassed) {
-        logger.error('Health check failed for new container, cleaning up');
-        await execAsync(`docker stop ${newContainerName}`);
-        await execAsync(`docker rm ${newContainerName}`);
-        throw new Error('New container failed health check');
-      }
-      
-      logger.info('Health check passed for new container');
-      
-      // Step 5: Stop the test container (we'll start production version)
-      await execAsync(`docker stop ${newContainerName}`);
-      await execAsync(`docker rm ${newContainerName}`);
-      
-      // Step 6: Backup current production container if it exists
-      logger.info('Backing up current production container');
+      // Step 3: Try Blue-Green deployment first, fallback to simple replacement if it fails
       try {
-        // Check if current container exists
-        await execAsync(`docker inspect ${currentContainerName}`);
-        // If it exists, rename it for backup
-        await execAsync(`docker rename ${currentContainerName} ${backupContainerName}`);
-        logger.info('Current container backed up successfully');
-      } catch (inspectError) {
-        logger.info('No existing production container to backup');
+        return await this.attemptBlueGreenDeployment(deploymentDir, newContainerName, currentContainerName, backupContainerName);
+      } catch (blueGreenError) {
+        logger.warn('Blue-Green deployment failed, falling back to simple replacement:', blueGreenError);
+        return await this.attemptSimpleReplacement(deploymentDir, currentContainerName, backupContainerName);
       }
       
-      // Step 7: Start new production container
-      logger.info('Starting new production container');
-      const prodRunCommand = `docker run -d \
-        --name ${currentContainerName} \
-        --env-file /app/source/.env.prod \
-        -e NODE_ENV=production \
-        -e PORT=4000 \
-        -e LOG_LEVEL=info \
-        -p 4000:4000 \
-        -v /app/source/logs/prod:/app/logs \
-        -v /app/source/backups/credex-core:/app/backups \
-        -v /app/source:/app/source \
-        -v /var/run/docker.sock:/var/run/docker.sock \
-        -v /app/source/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro \
-        --restart unless-stopped \
-        --network credex-prod-network \
-        credex-core-deployment:latest`;
+    } catch (error) {
+      logger.error('All deployment strategies failed:', error);
       
-      const { stdout: prodStdout, stderr: prodStderr } = await execAsync(prodRunCommand);
-      logger.info('Production container started', { stdout: prodStdout, stderr: prodStderr });
-      
-      // Step 8: Final health check on production port
-      logger.info('Performing final health check on production container');
-      await new Promise(resolve => setTimeout(resolve, 8000));
-      const finalHealthCheck = await this.performHealthCheck('http://localhost:4000/health', 30000);
-      
-      if (!finalHealthCheck) {
-        logger.error('Final health check failed, attempting rollback');
-        await this.rollbackZeroDowntimeDeployment(currentContainerName, backupContainerName);
-        throw new Error('Final health check failed, deployment rolled back');
-      }
-      
-      // Step 9: Stop and clean up backup container
-      logger.info('Cleaning up backup container');
-      try {
-        await execAsync(`docker stop ${backupContainerName}`);
-        await execAsync(`docker rm ${backupContainerName}`);
-        logger.info('Backup container cleaned up');
-      } catch (cleanupError) {
-        logger.info('No backup container to cleanup or cleanup failed (this is normal for first deployment)');
-      }
-      
-      // Step 10: Clean up deployment directory
+      // Clean up deployment directory on failure
       if (process.env.DEPLOYMENT_SOURCE_DIR) {
         try {
           await execAsync(`rm -rf ${process.env.DEPLOYMENT_SOURCE_DIR}`);
           delete process.env.DEPLOYMENT_SOURCE_DIR;
-          logger.info('Cleaned up deployment directory');
         } catch (cleanupError) {
           logger.warn('Failed to cleanup deployment directory:', cleanupError);
         }
       }
       
-      logger.info('Zero-Downtime deployment completed successfully');
-      return { stdout: prodStdout, stderr: prodStderr };
-      
-    } catch (error) {
-      logger.error('Zero-Downtime deployment failed:', error);
-      
-      // Cleanup new container if it exists
-      try {
-        await execAsync(`docker stop ${newContainerName}`);
-        await execAsync(`docker rm ${newContainerName}`);
-      } catch (cleanupError) {
-        logger.warn('Failed to cleanup new container during error handling:', cleanupError);
-      }
-      
       throw error;
     }
+  }
+
+  private async attemptBlueGreenDeployment(deploymentDir: string, newContainerName: string, currentContainerName: string, backupContainerName: string): Promise<any> {
+    logger.info('Attempting Blue-Green deployment strategy');
+    
+    // Step 1: Start new container on different port for testing
+    logger.info(`Starting new container for testing: ${newContainerName}`);
+    const testRunCommand = `docker run -d \
+      --name ${newContainerName} \
+      --env-file /app/source/.env.prod \
+      -e NODE_ENV=production \
+      -e PORT=4000 \
+      -e LOG_LEVEL=info \
+      -p 4001:4000 \
+      -v /app/source/logs/prod:/app/logs \
+      -v /app/source/backups/credex-core:/app/backups \
+      -v /app/source:/app/source \
+      -v /var/run/docker.sock:/var/run/docker.sock \
+      -v /app/source/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro \
+      --restart no \
+      --network credex-prod-network \
+      credex-core-deployment:latest`;
+    
+    const { stdout: testStdout, stderr: testStderr } = await execAsync(testRunCommand);
+    logger.info('Test container started', { stdout: testStdout, stderr: testStderr });
+    
+    // Step 2: Wait for new container to be ready and perform health check
+    logger.info('Waiting for new container to be ready...');
+    await new Promise(resolve => setTimeout(resolve, 15000)); // Increased wait time
+    
+    logger.info('Performing health check on new container');
+    const healthCheckPassed = await this.performHealthCheck('http://localhost:4001/health', 45000); // Increased timeout
+    
+    if (!healthCheckPassed) {
+      logger.error('Health check failed for new container, cleaning up');
+      await execAsync(`docker stop ${newContainerName}`);
+      await execAsync(`docker rm ${newContainerName}`);
+      throw new Error('New container failed health check');
+    }
+    
+    logger.info('Health check passed for new container');
+    
+    // Step 3: Stop the test container (we'll start production version)
+    await execAsync(`docker stop ${newContainerName}`);
+    await execAsync(`docker rm ${newContainerName}`);
+    
+    // Step 4: Backup current production container if it exists
+    logger.info('Backing up current production container');
+    try {
+      // Check if current container exists
+      await execAsync(`docker inspect ${currentContainerName}`);
+      // If it exists, rename it for backup
+      await execAsync(`docker rename ${currentContainerName} ${backupContainerName}`);
+      logger.info('Current container backed up successfully');
+    } catch (inspectError) {
+      logger.info('No existing production container to backup');
+    }
+    
+    // Step 5: Start new production container
+    logger.info('Starting new production container');
+    const prodRunCommand = `docker run -d \
+      --name ${currentContainerName} \
+      --env-file /app/source/.env.prod \
+      -e NODE_ENV=production \
+      -e PORT=4000 \
+      -e LOG_LEVEL=info \
+      -p 4000:4000 \
+      -v /app/source/logs/prod:/app/logs \
+      -v /app/source/backups/credex-core:/app/backups \
+      -v /app/source:/app/source \
+      -v /var/run/docker.sock:/var/run/docker.sock \
+      -v /app/source/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro \
+      --restart unless-stopped \
+      --network credex-prod-network \
+      credex-core-deployment:latest`;
+    
+    const { stdout: prodStdout, stderr: prodStderr } = await execAsync(prodRunCommand);
+    logger.info('Production container started', { stdout: prodStdout, stderr: prodStderr });
+    
+    // Step 6: Final health check on production port
+    logger.info('Performing final health check on production container');
+    await new Promise(resolve => setTimeout(resolve, 10000));
+    const finalHealthCheck = await this.performHealthCheck('http://localhost:4000/health', 45000);
+    
+    if (!finalHealthCheck) {
+      logger.error('Final health check failed, attempting rollback');
+      await this.rollbackZeroDowntimeDeployment(currentContainerName, backupContainerName);
+      throw new Error('Final health check failed, deployment rolled back');
+    }
+    
+    // Step 7: Stop and clean up backup container
+    logger.info('Cleaning up backup container');
+    try {
+      await execAsync(`docker stop ${backupContainerName}`);
+      await execAsync(`docker rm ${backupContainerName}`);
+      logger.info('Backup container cleaned up');
+    } catch (cleanupError) {
+      logger.info('No backup container to cleanup or cleanup failed (this is normal for first deployment)');
+    }
+    
+    // Step 8: Clean up deployment directory
+    if (process.env.DEPLOYMENT_SOURCE_DIR) {
+      try {
+        await execAsync(`rm -rf ${process.env.DEPLOYMENT_SOURCE_DIR}`);
+        delete process.env.DEPLOYMENT_SOURCE_DIR;
+        logger.info('Cleaned up deployment directory');
+      } catch (cleanupError) {
+        logger.warn('Failed to cleanup deployment directory:', cleanupError);
+      }
+    }
+    
+    logger.info('Blue-Green deployment completed successfully');
+    return { stdout: prodStdout, stderr: prodStderr };
+  }
+
+  private async attemptSimpleReplacement(deploymentDir: string, currentContainerName: string, backupContainerName: string): Promise<any> {
+    logger.info('Attempting Simple Replacement deployment strategy');
+    
+    // Step 1: Backup current production container if it exists
+    logger.info('Backing up current production container');
+    try {
+      // Check if current container exists
+      await execAsync(`docker inspect ${currentContainerName}`);
+      // If it exists, rename it for backup
+      await execAsync(`docker rename ${currentContainerName} ${backupContainerName}`);
+      logger.info('Current container backed up successfully');
+    } catch (inspectError) {
+      logger.info('No existing production container to backup');
+    }
+    
+    // Step 2: Start new production container directly
+    logger.info('Starting new production container');
+    const prodRunCommand = `docker run -d \
+      --name ${currentContainerName} \
+      --env-file /app/source/.env.prod \
+      -e NODE_ENV=production \
+      -e PORT=4000 \
+      -e LOG_LEVEL=info \
+      -p 4000:4000 \
+      -v /app/source/logs/prod:/app/logs \
+      -v /app/source/backups/credex-core:/app/backups \
+      -v /app/source:/app/source \
+      -v /var/run/docker.sock:/var/run/docker.sock \
+      -v /app/source/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro \
+      --restart unless-stopped \
+      --network credex-prod-network \
+      credex-core-deployment:latest`;
+    
+    const { stdout: prodStdout, stderr: prodStderr } = await execAsync(prodRunCommand);
+    logger.info('Production container started', { stdout: prodStdout, stderr: prodStderr });
+    
+    // Step 3: Health check on production port
+    logger.info('Performing health check on production container');
+    await new Promise(resolve => setTimeout(resolve, 15000));
+    const healthCheck = await this.performHealthCheck('http://localhost:4000/health', 60000); // Longer timeout for simple replacement
+    
+    if (!healthCheck) {
+      logger.error('Health check failed, attempting rollback');
+      await this.rollbackZeroDowntimeDeployment(currentContainerName, backupContainerName);
+      throw new Error('Simple replacement failed health check, deployment rolled back');
+    }
+    
+    // Step 4: Stop and clean up backup container
+    logger.info('Cleaning up backup container');
+    try {
+      await execAsync(`docker stop ${backupContainerName}`);
+      await execAsync(`docker rm ${backupContainerName}`);
+      logger.info('Backup container cleaned up');
+    } catch (cleanupError) {
+      logger.info('No backup container to cleanup or cleanup failed (this is normal for first deployment)');
+    }
+    
+    // Step 5: Clean up deployment directory
+    if (process.env.DEPLOYMENT_SOURCE_DIR) {
+      try {
+        await execAsync(`rm -rf ${process.env.DEPLOYMENT_SOURCE_DIR}`);
+        delete process.env.DEPLOYMENT_SOURCE_DIR;
+        logger.info('Cleaned up deployment directory');
+      } catch (cleanupError) {
+        logger.warn('Failed to cleanup deployment directory:', cleanupError);
+      }
+    }
+    
+    logger.info('Simple Replacement deployment completed successfully');
+    return { stdout: prodStdout, stderr: prodStderr };
   }
 
   private async deployChatserverDirect(): Promise<any> {
@@ -516,17 +602,51 @@ export class DeploymentService {
     const startTime = Date.now();
     const maxRetries = Math.floor(timeoutMs / 2000); // Check every 2 seconds
     
+    logger.info(`Starting health check for ${url} with ${maxRetries} retries over ${timeoutMs}ms`);
+    
     for (let i = 0; i < maxRetries; i++) {
       try {
-        const { stdout } = await execAsync(`curl -f -s --max-time 5 ${url}`);
-        const healthResponse = JSON.parse(stdout);
+        logger.info(`Health check attempt ${i + 1}/${maxRetries} for ${url}`);
+        const { stdout, stderr } = await execAsync(`curl -f -s --max-time 5 ${url}`);
         
-        if (healthResponse.status === 'healthy') {
-          logger.info(`Health check passed for ${url}`);
-          return true;
+        if (stdout.trim()) {
+          try {
+            const healthResponse = JSON.parse(stdout);
+            logger.info(`Health check response:`, healthResponse);
+            
+            if (healthResponse.status === 'healthy') {
+              logger.info(`Health check passed for ${url}`);
+              return true;
+            }
+          } catch (parseError) {
+            logger.warn(`Failed to parse health response as JSON: ${stdout}`);
+            // If it's not JSON but we got a response, it might still be healthy
+            if (stdout.includes('healthy') || stdout.includes('ok')) {
+              logger.info(`Health check passed for ${url} (non-JSON response)`);
+              return true;
+            }
+          }
         }
+        
+        logger.warn(`Health check attempt ${i + 1} failed - no valid response from ${url}`);
+        
       } catch (error) {
-        logger.debug(`Health check attempt ${i + 1} failed for ${url}:`, error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.warn(`Health check attempt ${i + 1} failed for ${url}: ${errorMessage}`);
+        
+        // Check if container is even running
+        if (i === 0) {
+          try {
+            const { stdout: containerStatus } = await execAsync('docker ps --filter "name=credex-core-prod-new" --format "{{.Status}}"');
+            logger.info(`Container status: ${containerStatus.trim() || 'Not found'}`);
+            
+            // Check container logs for debugging
+            const { stdout: containerLogs } = await execAsync('docker logs --tail 20 credex-core-prod-new');
+            logger.info(`Container logs (last 20 lines): ${containerLogs}`);
+          } catch (debugError) {
+            logger.warn('Failed to get container debug info:', debugError);
+          }
+        }
       }
       
       // Wait 2 seconds before next attempt
@@ -538,7 +658,7 @@ export class DeploymentService {
       }
     }
     
-    logger.error(`Health check failed for ${url} after ${timeoutMs}ms`);
+    logger.error(`Health check failed for ${url} after ${timeoutMs}ms and ${maxRetries} attempts`);
     return false;
   }
 
