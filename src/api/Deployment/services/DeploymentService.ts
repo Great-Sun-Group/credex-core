@@ -366,7 +366,27 @@ export class DeploymentService {
   private async attemptBlueGreenDeployment(deploymentDir: string, newContainerName: string, currentContainerName: string, backupContainerName: string): Promise<any> {
     logger.info('Attempting Blue-Green deployment strategy');
     
-    // Step 1: Start new container on different port for testing
+    // Step 1: Check if port 4001 is available for testing
+    try {
+      const { stdout: portCheck } = await execAsync('netstat -tlnp | grep :4001 || echo "Port 4001 available"');
+      if (portCheck.includes('4001') && !portCheck.includes('available')) {
+        logger.warn('Port 4001 is in use, skipping blue-green testing');
+        throw new Error('Port 4001 unavailable for blue-green testing');
+      }
+    } catch (portError) {
+      logger.warn('Could not check port availability, proceeding with caution');
+    }
+    
+    // Step 2: Clean up any existing test containers
+    try {
+      await execAsync(`docker stop ${newContainerName}`);
+      await execAsync(`docker rm ${newContainerName}`);
+      logger.info('Cleaned up existing test container');
+    } catch (cleanupError) {
+      logger.debug('No existing test container to clean up');
+    }
+    
+    // Step 3: Start new container on different port for testing
     logger.info(`Starting new container for testing: ${newContainerName}`);
     const testRunCommand = `docker run -d \
       --name ${newContainerName} \
@@ -384,15 +404,36 @@ export class DeploymentService {
       --network credex-prod-network \
       credex-core-deployment:latest`;
     
-    const { stdout: testStdout, stderr: testStderr } = await execAsync(testRunCommand);
-    logger.info('Test container started', { stdout: testStdout, stderr: testStderr });
+    try {
+      const { stdout: testStdout, stderr: testStderr } = await execAsync(testRunCommand);
+      logger.info('Test container started', { stdout: testStdout, stderr: testStderr });
+    } catch (startError) {
+      logger.error('Failed to start test container:', startError);
+      // If we can't start the test container, skip blue-green and go to simple replacement
+      throw new Error('Could not start test container for blue-green deployment');
+    }
     
-    // Step 2: Wait for new container to be ready and perform health check
+    // Step 4: Wait for new container to be ready and perform health check
     logger.info('Waiting for new container to be ready...');
-    await new Promise(resolve => setTimeout(resolve, 15000)); // Increased wait time
+    await new Promise(resolve => setTimeout(resolve, 20000)); // Increased wait time
+    
+    // Step 5: Check container status before health check
+    try {
+      const { stdout: containerStatus } = await execAsync(`docker ps --filter "name=${newContainerName}" --format "{{.Status}}"`);
+      if (!containerStatus.includes('Up')) {
+        logger.error(`Test container is not running: ${containerStatus}`);
+        const { stdout: containerLogs } = await execAsync(`docker logs ${newContainerName}`);
+        logger.error('Container logs:', containerLogs);
+        throw new Error('Test container failed to start properly');
+      }
+      logger.info(`Test container status: ${containerStatus}`);
+    } catch (statusError) {
+      logger.error('Failed to check container status:', statusError);
+      throw new Error('Could not verify test container status');
+    }
     
     logger.info('Performing health check on new container');
-    const healthCheckPassed = await this.performHealthCheck('http://localhost:4001/health', 45000); // Increased timeout
+    const healthCheckPassed = await this.performHealthCheck('http://localhost:4001/health', 30000); // Reduced timeout for faster fallback
     
     if (!healthCheckPassed) {
       logger.error('Health check failed for new container, cleaning up');
@@ -403,7 +444,7 @@ export class DeploymentService {
     
     logger.info('Health check passed for new container');
     
-    // Step 3: Stop the test container (we'll start production version)
+    // Step 6: Stop the test container (we'll start production version)
     await execAsync(`docker stop ${newContainerName}`);
     await execAsync(`docker rm ${newContainerName}`);
     
