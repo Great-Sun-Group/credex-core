@@ -607,9 +607,36 @@ export class DeploymentService {
     for (let i = 0; i < maxRetries; i++) {
       try {
         logger.info(`Health check attempt ${i + 1}/${maxRetries} for ${url}`);
-        const { stdout, stderr } = await execAsync(`curl -f -s --max-time 5 ${url}`);
         
-        if (stdout.trim()) {
+        // Try wget first (available in most containers), then curl as fallback
+        let stdout = '';
+        let healthCheckSuccess = false;
+        
+        try {
+          const wgetResult = await execAsync(`wget -q -O - --timeout=5 ${url}`);
+          stdout = wgetResult.stdout;
+          healthCheckSuccess = true;
+        } catch (wgetError) {
+          logger.debug('wget failed, trying curl:', wgetError);
+          try {
+            const curlResult = await execAsync(`curl -f -s --max-time 5 ${url}`);
+            stdout = curlResult.stdout;
+            healthCheckSuccess = true;
+          } catch (curlError) {
+            logger.debug('curl also failed:', curlError);
+            // Both wget and curl failed, but let's check if the container is responding via docker exec
+            try {
+              const dockerExecResult = await execAsync(`docker exec credex-core-prod-new wget -q -O - --timeout=5 http://localhost:4000/health`);
+              stdout = dockerExecResult.stdout;
+              healthCheckSuccess = true;
+              logger.info('Health check succeeded via docker exec');
+            } catch (dockerExecError) {
+              logger.warn('All health check methods failed:', dockerExecError);
+            }
+          }
+        }
+        
+        if (healthCheckSuccess && stdout.trim()) {
           try {
             const healthResponse = JSON.parse(stdout);
             logger.info(`Health check response:`, healthResponse);
@@ -634,15 +661,20 @@ export class DeploymentService {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.warn(`Health check attempt ${i + 1} failed for ${url}: ${errorMessage}`);
         
-        // Check if container is even running
-        if (i === 0) {
+        // Check if container is even running and get debug info
+        if (i === 0 || i === 5) { // Check on first attempt and every 5th attempt
           try {
             const { stdout: containerStatus } = await execAsync('docker ps --filter "name=credex-core-prod-new" --format "{{.Status}}"');
             logger.info(`Container status: ${containerStatus.trim() || 'Not found'}`);
             
             // Check container logs for debugging
-            const { stdout: containerLogs } = await execAsync('docker logs --tail 20 credex-core-prod-new');
-            logger.info(`Container logs (last 20 lines): ${containerLogs}`);
+            const { stdout: containerLogs } = await execAsync('docker logs --tail 10 credex-core-prod-new');
+            logger.info(`Container logs (last 10 lines): ${containerLogs}`);
+            
+            // Check if the container is actually listening on port 4000
+            const { stdout: portCheck } = await execAsync('docker exec credex-core-prod-new netstat -tlnp | grep :4000 || echo "Port 4000 not found"');
+            logger.info(`Port check: ${portCheck.trim()}`);
+            
           } catch (debugError) {
             logger.warn('Failed to get container debug info:', debugError);
           }
