@@ -3,7 +3,6 @@ import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs/promises';
 import logger from '../../../utils/logger';
-import { getConfig } from '../../../../config/config';
 
 const execAsync = promisify(exec);
 
@@ -29,20 +28,15 @@ export class DeploymentService {
     return DeploymentService.instance;
   }
 
-  private async initializeDeployTokens(): Promise<void> {
-    try {
-      const config = await getConfig();
-      // Load deploy token from environment variable
-      const deployToken = process.env.DEPLOY_TOKEN;
+  private initializeDeployTokens(): void {
+    // Load deploy token from environment variable
+    const deployToken = process.env.DEPLOY_TOKEN;
 
-      if (deployToken) {
-        this.deployTokens.add(deployToken);
-        logger.info('Initialized deployment token');
-      } else {
-        logger.warn('No DEPLOY_TOKEN environment variable found');
-      }
-    } catch (error) {
-      logger.error('Failed to initialize deployment tokens:', error);
+    if (deployToken) {
+      this.deployTokens.add(deployToken);
+      logger.info('Initialized deployment token');
+    } else {
+      logger.warn('No DEPLOY_TOKEN environment variable found');
     }
   }
 
