@@ -374,9 +374,10 @@ export class DeploymentService {
     try {
       // Check if current container exists
       await execAsync(`docker inspect ${currentContainerName}`);
-      // If it exists, rename it for backup
+      // If it exists, stop it first, then rename it for backup
+      await execAsync(`docker stop ${currentContainerName}`);
       await execAsync(`docker rename ${currentContainerName} ${backupContainerName}`);
-      logger.info('Current container backed up successfully');
+      logger.info('Current container stopped and backed up successfully');
     } catch (inspectError) {
       logger.info('No existing production container to backup');
     }
