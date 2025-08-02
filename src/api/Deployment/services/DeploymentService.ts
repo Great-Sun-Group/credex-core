@@ -288,85 +288,16 @@ export class DeploymentService {
   }
 
   private async deployWithDocker(service: string): Promise<any> {
-    logger.info(`Deploying ${service} with Docker Compose`);
+    logger.info(`Deploying ${service} with Zero-Downtime Docker strategy`);
     
     try {
-      let composeCommand: string;
-      
       if (service === 'credex-core') {
-        // For credex-core, we need to build from the deployment directory but deploy to the main system
-        // Use docker build directly instead of docker-compose to avoid validation issues
-        const deploymentDir = process.env.DEPLOYMENT_SOURCE_DIR || '/app/source';
-        
-        // Build the image from the deployment directory
-        const buildCommand = `cd ${deploymentDir} && docker build --target production -t credex-core-deployment:latest .`;
-        logger.info('Building credex-core image from deployment directory');
-        await execAsync(buildCommand);
-        
-        // Stop the current container
-        logger.info('Stopping current credex-core-prod container');
-        try {
-          await execAsync('docker stop credex-core-prod');
-          await execAsync('docker rm credex-core-prod');
-        } catch (stopError) {
-          logger.warn('Failed to stop/remove existing container (may not exist):', stopError);
-        }
-        
-        // Start new container with the same configuration as docker-compose
-        const runCommand = `docker run -d \
-          --name credex-core-prod \
-          --env-file /app/source/.env.prod \
-          -e NODE_ENV=production \
-          -e PORT=4000 \
-          -e LOG_LEVEL=info \
-          -p 4000:4000 \
-          -v /app/source/logs/prod:/app/logs \
-          -v /app/source/backups/credex-core:/app/backups \
-          -v /app/source:/app/source \
-          -v /var/run/docker.sock:/var/run/docker.sock \
-          -v /app/source/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro \
-          --restart unless-stopped \
-          --network credex-prod-network \
-          credex-core-deployment:latest`;
-        
-        logger.info('Starting new credex-core-prod container');
-        const { stdout, stderr } = await execAsync(runCommand);
-        
-        logger.info(`Docker deployment completed for ${service}`, { stdout, stderr });
-        
-        // Wait a moment for service to start
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        
-        // Clean up deployment directory after successful deployment
-        if (process.env.DEPLOYMENT_SOURCE_DIR) {
-          try {
-            await execAsync(`rm -rf ${process.env.DEPLOYMENT_SOURCE_DIR}`);
-            delete process.env.DEPLOYMENT_SOURCE_DIR;
-            logger.info('Cleaned up deployment directory');
-          } catch (cleanupError) {
-            logger.warn('Failed to cleanup deployment directory:', cleanupError);
-          }
-        }
-        
-        return { stdout, stderr };
-        
+        return await this.deployCredexCoreZeroDowntime();
       } else if (service === 'vimbiso-chatserver') {
-        // For chatserver, use the unified docker-compose.prod.yml from credex-core directory
-        // This now works because both services use the same .env.prod file
-        composeCommand = `cd /app/source && docker-compose -f docker-compose.prod.yml up -d --build --force-recreate --no-deps vimbiso-chatserver-prod`;
-        
-        const { stdout, stderr } = await execAsync(composeCommand);
-        
-        logger.info(`Docker deployment completed for ${service}`, { stdout, stderr });
-        
-        // Wait a moment for services to start
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        
-        return { stdout, stderr };
+        return await this.deployChatserverDirect();
       } else {
         throw new Error(`Unknown service: ${service}`);
       }
-      
     } catch (error) {
       logger.error(`Docker deployment failed for ${service}:`, error);
       
@@ -380,6 +311,261 @@ export class DeploymentService {
         }
       }
       
+      throw error;
+    }
+  }
+
+  private async deployCredexCoreZeroDowntime(): Promise<any> {
+    const deploymentDir = process.env.DEPLOYMENT_SOURCE_DIR || '/app/source';
+    const newContainerName = 'credex-core-prod-new';
+    const currentContainerName = 'credex-core-prod';
+    const backupContainerName = 'credex-core-prod-backup';
+    
+    logger.info('Starting Zero-Downtime deployment for credex-core');
+    
+    try {
+      // Step 1: Ensure network exists
+      logger.info('Ensuring Docker network exists');
+      try {
+        await execAsync('docker network create credex-prod-network');
+      } catch (networkError) {
+        // Network might already exist, which is fine
+        logger.info('Docker network already exists or creation failed (likely already exists)');
+      }
+      
+      // Step 2: Build new image from deployment directory
+      const buildCommand = `cd ${deploymentDir} && docker build --target production -t credex-core-deployment:latest .`;
+      logger.info('Building credex-core image from deployment directory');
+      await execAsync(buildCommand);
+      
+      // Step 3: Start new container on different port for testing
+      logger.info(`Starting new container for testing: ${newContainerName}`);
+      const testRunCommand = `docker run -d \
+        --name ${newContainerName} \
+        --env-file /app/source/.env.prod \
+        -e NODE_ENV=production \
+        -e PORT=4000 \
+        -e LOG_LEVEL=info \
+        -p 4001:4000 \
+        -v /app/source/logs/prod:/app/logs \
+        -v /app/source/backups/credex-core:/app/backups \
+        -v /app/source:/app/source \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v /app/source/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro \
+        --restart no \
+        --network credex-prod-network \
+        credex-core-deployment:latest`;
+      
+      const { stdout: testStdout, stderr: testStderr } = await execAsync(testRunCommand);
+      logger.info('Test container started', { stdout: testStdout, stderr: testStderr });
+      
+      // Step 4: Wait for new container to be ready and perform health check
+      logger.info('Waiting for new container to be ready...');
+      await new Promise(resolve => setTimeout(resolve, 10000));
+      
+      logger.info('Performing health check on new container');
+      const healthCheckPassed = await this.performHealthCheck('http://localhost:4001/health', 30000);
+      
+      if (!healthCheckPassed) {
+        logger.error('Health check failed for new container, cleaning up');
+        await execAsync(`docker stop ${newContainerName}`);
+        await execAsync(`docker rm ${newContainerName}`);
+        throw new Error('New container failed health check');
+      }
+      
+      logger.info('Health check passed for new container');
+      
+      // Step 5: Stop the test container (we'll start production version)
+      await execAsync(`docker stop ${newContainerName}`);
+      await execAsync(`docker rm ${newContainerName}`);
+      
+      // Step 6: Backup current production container if it exists
+      logger.info('Backing up current production container');
+      try {
+        // Check if current container exists
+        await execAsync(`docker inspect ${currentContainerName}`);
+        // If it exists, rename it for backup
+        await execAsync(`docker rename ${currentContainerName} ${backupContainerName}`);
+        logger.info('Current container backed up successfully');
+      } catch (inspectError) {
+        logger.info('No existing production container to backup');
+      }
+      
+      // Step 7: Start new production container
+      logger.info('Starting new production container');
+      const prodRunCommand = `docker run -d \
+        --name ${currentContainerName} \
+        --env-file /app/source/.env.prod \
+        -e NODE_ENV=production \
+        -e PORT=4000 \
+        -e LOG_LEVEL=info \
+        -p 4000:4000 \
+        -v /app/source/logs/prod:/app/logs \
+        -v /app/source/backups/credex-core:/app/backups \
+        -v /app/source:/app/source \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v /app/source/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro \
+        --restart unless-stopped \
+        --network credex-prod-network \
+        credex-core-deployment:latest`;
+      
+      const { stdout: prodStdout, stderr: prodStderr } = await execAsync(prodRunCommand);
+      logger.info('Production container started', { stdout: prodStdout, stderr: prodStderr });
+      
+      // Step 8: Final health check on production port
+      logger.info('Performing final health check on production container');
+      await new Promise(resolve => setTimeout(resolve, 8000));
+      const finalHealthCheck = await this.performHealthCheck('http://localhost:4000/health', 30000);
+      
+      if (!finalHealthCheck) {
+        logger.error('Final health check failed, attempting rollback');
+        await this.rollbackZeroDowntimeDeployment(currentContainerName, backupContainerName);
+        throw new Error('Final health check failed, deployment rolled back');
+      }
+      
+      // Step 9: Stop and clean up backup container
+      logger.info('Cleaning up backup container');
+      try {
+        await execAsync(`docker stop ${backupContainerName}`);
+        await execAsync(`docker rm ${backupContainerName}`);
+        logger.info('Backup container cleaned up');
+      } catch (cleanupError) {
+        logger.info('No backup container to cleanup or cleanup failed (this is normal for first deployment)');
+      }
+      
+      // Step 10: Clean up deployment directory
+      if (process.env.DEPLOYMENT_SOURCE_DIR) {
+        try {
+          await execAsync(`rm -rf ${process.env.DEPLOYMENT_SOURCE_DIR}`);
+          delete process.env.DEPLOYMENT_SOURCE_DIR;
+          logger.info('Cleaned up deployment directory');
+        } catch (cleanupError) {
+          logger.warn('Failed to cleanup deployment directory:', cleanupError);
+        }
+      }
+      
+      logger.info('Zero-Downtime deployment completed successfully');
+      return { stdout: prodStdout, stderr: prodStderr };
+      
+    } catch (error) {
+      logger.error('Zero-Downtime deployment failed:', error);
+      
+      // Cleanup new container if it exists
+      try {
+        await execAsync(`docker stop ${newContainerName}`);
+        await execAsync(`docker rm ${newContainerName}`);
+      } catch (cleanupError) {
+        logger.warn('Failed to cleanup new container during error handling:', cleanupError);
+      }
+      
+      throw error;
+    }
+  }
+
+  private async deployChatserverDirect(): Promise<any> {
+    logger.info('Deploying chatserver with direct Docker commands');
+    
+    try {
+      // For chatserver, we'll need to build from the vimbiso-chatserver directory
+      const chatserverPath = process.env.VIMBISO_CHATSERVER_PATH || '../vimbiso-chatserver';
+      
+      // Build chatserver image
+      const buildCommand = `cd ${chatserverPath} && docker build --target production -t vimbiso-chatserver-deployment:latest .`;
+      logger.info('Building vimbiso-chatserver image');
+      await execAsync(buildCommand);
+      
+      // Stop current chatserver container
+      try {
+        await execAsync('docker stop vimbiso-chatserver-prod');
+        await execAsync('docker rm vimbiso-chatserver-prod');
+      } catch (stopError) {
+        logger.warn('Failed to stop existing chatserver container (may not exist):', stopError);
+      }
+      
+      // Start new chatserver container
+      const runCommand = `docker run -d \
+        --name vimbiso-chatserver-prod \
+        --env-file /app/source/.env.prod \
+        -e REDIS_URL=redis://redis-state-prod:6379/0 \
+        -e USE_PROGRESSIVE_FLOW=True \
+        -e PORT=9000 \
+        -p 9000:9000 \
+        -v vimbiso-prod-data:/app/data \
+        -v /app/source/backups/vimbiso:/app/backups \
+        --restart unless-stopped \
+        --network credex-prod-network \
+        vimbiso-chatserver-deployment:latest \
+        bash -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:9000 --workers 2 --timeout 120"`;
+      
+      const { stdout, stderr } = await execAsync(runCommand);
+      
+      logger.info('Chatserver deployment completed', { stdout, stderr });
+      
+      // Wait a moment for service to start
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      return { stdout, stderr };
+      
+    } catch (error) {
+      logger.error('Chatserver deployment failed:', error);
+      throw error;
+    }
+  }
+
+  private async performHealthCheck(url: string, timeoutMs: number = 30000): Promise<boolean> {
+    const startTime = Date.now();
+    const maxRetries = Math.floor(timeoutMs / 2000); // Check every 2 seconds
+    
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const { stdout } = await execAsync(`curl -f -s --max-time 5 ${url}`);
+        const healthResponse = JSON.parse(stdout);
+        
+        if (healthResponse.status === 'healthy') {
+          logger.info(`Health check passed for ${url}`);
+          return true;
+        }
+      } catch (error) {
+        logger.debug(`Health check attempt ${i + 1} failed for ${url}:`, error);
+      }
+      
+      // Wait 2 seconds before next attempt
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Check if we've exceeded timeout
+      if (Date.now() - startTime > timeoutMs) {
+        break;
+      }
+    }
+    
+    logger.error(`Health check failed for ${url} after ${timeoutMs}ms`);
+    return false;
+  }
+
+  private async rollbackZeroDowntimeDeployment(currentContainerName: string, backupContainerName: string): Promise<void> {
+    logger.info('Performing Zero-Downtime deployment rollback');
+    
+    try {
+      // Stop current (failed) container
+      try {
+        await execAsync(`docker stop ${currentContainerName}`);
+        await execAsync(`docker rm ${currentContainerName}`);
+      } catch (stopError) {
+        logger.warn('Failed to stop current container during rollback:', stopError);
+      }
+      
+      // Restore backup container
+      try {
+        await execAsync(`docker rename ${backupContainerName} ${currentContainerName}`);
+        await execAsync(`docker start ${currentContainerName}`);
+        logger.info('Successfully rolled back to previous container');
+      } catch (rollbackError) {
+        logger.error('Failed to rollback to previous container:', rollbackError);
+        throw rollbackError;
+      }
+      
+    } catch (error) {
+      logger.error('Rollback failed:', error);
       throw error;
     }
   }
