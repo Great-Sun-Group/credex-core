@@ -50,16 +50,16 @@ export class DeploymentService {
     return this.deployTokens.has(token);
   }
 
-  public async deployCredexCore(branch: string = 'prod', commitSha?: string): Promise<DeploymentResult> {
+  public async deployCredexCore(branch: string = 'prod'): Promise<DeploymentResult> {
     const deploymentId = `credex-core-${Date.now()}`;
-    logger.info(`Starting credex-core deployment ${deploymentId}`, { branch, commitSha });
+    logger.info(`Starting credex-core deployment ${deploymentId}`, { branch });
 
     try {
       // Create backup of current state
       const backupInfo = await this.createBackup('credex-core-prod');
       
       // Pull latest changes to ensure we're building with the latest code
-      await this.pullLatestChanges('credex-core', branch, commitSha);
+      await this.pullLatestChanges('credex-core', branch);
       
       // Deploy using Docker Compose (this will rebuild with the latest code)
       const deployResult = await this.deployWithDocker('credex-core');
@@ -85,7 +85,6 @@ export class DeploymentService {
         details: {
           deploymentId,
           branch,
-          commitSha,
           timestamp: new Date().toISOString()
         }
       };
@@ -124,7 +123,7 @@ export class DeploymentService {
       const backupInfo = await this.createBackup('vimbiso-chatserver-prod');
       
       // Pull latest changes for chatserver
-      await this.pullLatestChanges('vimbiso-chatserver', branch, commitSha, chatserverPath);
+      await this.pullLatestChanges('vimbiso-chatserver', branch, chatserverPath);
       
       // Deploy chatserver using Docker Compose from credex-core directory
       const deployResult = await this.deployWithDocker('vimbiso-chatserver');
@@ -222,12 +221,12 @@ export class DeploymentService {
     }
   }
 
-  private async pullLatestChanges(service: string, branch: string, commitSha?: string, servicePath?: string): Promise<void> {
+  private async pullLatestChanges(service: string, branch: string, servicePath?: string): Promise<void> {
     // Create a separate deployment directory to avoid conflicts with development work
     const deploymentDir = `/app/deployment-${service}-${Date.now()}`;
     const sourceDir = servicePath || '/app/source';
     
-    logger.info(`Pulling latest changes for ${service}`, { branch, commitSha, deploymentDir });
+    logger.info(`Pulling latest changes for ${service}`, { branch, deploymentDir });
 
     try {
       // Create deployment directory
@@ -242,10 +241,8 @@ export class DeploymentService {
       await execAsync(`git checkout ${branch}`, { cwd: deploymentDir });
       await execAsync(`git pull origin ${branch}`, { cwd: deploymentDir });
       
-      // If specific commit SHA is provided, checkout that commit
-      if (commitSha) {
-        await execAsync(`git checkout ${commitSha}`, { cwd: deploymentDir });
-      }
+      // We always use the latest commit on the specified branch
+      logger.info(`Using latest commit on ${branch} branch`);
       
       // Copy environment files that aren't in git
       if (service === 'credex-core') {
