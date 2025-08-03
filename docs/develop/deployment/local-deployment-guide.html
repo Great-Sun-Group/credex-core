@@ -20,7 +20,7 @@
     <h1 class="chapter-title">Local CI/CD Pipeline Deployment Guide</h1>
 
     <p>
-      This guide covers the new local deployment system that replaced the previous AWS-based infrastructure.
+      This guide covers the local deployment system that replaced previous AWS-based infrastructure.
     </p>
 
     <h2>Overview</h2>
@@ -38,9 +38,9 @@
       <li><strong>vimbisopay</strong>: Flutter mobile application</li>
     </ul>
 
-    <h3>Queue-Based Deployment System</h3>
+    <h3>Daemon and Queue-Based Deployment System</h3>
     <p>
-      The deployment system uses a robust queue-based architecture without circular dependency issues, ensuring reliable deployments:
+      The deployment system uses a queue-based architecture, with a daemon in a seperate container from credex-core but polling a directory it shares with the core, ensuring reliable deployments:
     </p>
 
     <pre><code>GitHub Repository → GitHub Actions → Container API → Deployment Queue → Host Daemon → Docker Commands
@@ -409,12 +409,6 @@ docker logs vimbiso-chatserver-prod --tail 50</code></pre>
     </ul>
 
     <hr>
-
-    <p>
-      <strong>Last Updated</strong>: August 2, 2025<br>
-      <strong>Pipeline Version</strong>: Phase 2 - Local CI/CD Implementation with Queue-Based Deployment System<br>
-      <strong>Status</strong>: ✅ Fully Operational
-    </p>
 
     <!-- Footer Component -->
     <div id="footer-develop"></div>
