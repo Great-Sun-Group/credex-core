@@ -61,9 +61,24 @@ deploy_credex_core() {
     
     # Checkout specified branch
     cd "$deploy_dir"
+    
+    # Ensure we're using the correct remote origin
+    log "Configuring remote origin to GitHub"
+    git remote set-url origin https://github.com/Great-Sun-Group/credex-core.git
+    git remote -v
+    
+    # Fetch and checkout the specified branch
+    log "Fetching latest changes from GitHub"
     git fetch origin
     git checkout "$branch"
+    
+    # Force pull from remote GitHub repository
+    log "Pulling latest code from GitHub branch: $branch"
     git pull origin "$branch"
+    
+    # Verify we have the latest commit
+    log "Current commit: $(git rev-parse HEAD)"
+    log "Latest commit on GitHub $branch: $(git rev-parse origin/$branch)"
     
     log "Successfully pulled latest code from GitHub branch: $branch"
     
