@@ -15,18 +15,38 @@ echo "   API Container (credex-core-prod): $([[ $API_RUNNING -eq 1 ]] && echo "�
 echo "   Daemon Container (credex-deploy-daemon): $([[ $DAEMON_RUNNING -eq 1 ]] && echo "✅ Running" || echo "❌ Not running")"
 echo
 
-# Test 2: Check volume mounts
-echo "2. Checking volume mounts..."
+# Test 2: Check volume mounts and verify Docker volume usage
+echo "2. Checking volume mounts and verifying Docker volume usage..."
 if [[ $API_RUNNING -eq 1 ]]; then
     echo "   API Container volume mount:"
-    docker exec credex-core-prod mount | grep deploy-queue || echo "   ❌ No deploy-queue mount found"
+    API_MOUNT=$(docker exec credex-core-prod mount | grep deploy-queue || echo "No mount found")
+    echo "     $API_MOUNT"
+    
+    # Check if it's using Docker volume (should show /dev/xxx, not host path)
+    if echo "$API_MOUNT" | grep -q "^/dev/"; then
+        echo "   ✅ API Container: Using Docker volume (correct)"
+    elif echo "$API_MOUNT" | grep -q "No mount found"; then
+        echo "   ❌ API Container: No deploy-queue mount found"
+    else
+        echo "   ⚠️  API Container: Using bind mount (may cause issues)"
+    fi
 else
     echo "   ❌ API container not running - cannot check mounts"
 fi
 
 if [[ $DAEMON_RUNNING -eq 1 ]]; then
     echo "   Daemon Container volume mount:"
-    docker exec credex-deploy-daemon mount | grep deploy-queue || echo "   ❌ No deploy-queue mount found"
+    DAEMON_MOUNT=$(docker exec credex-deploy-daemon mount | grep deploy-queue || echo "No mount found")
+    echo "     $DAEMON_MOUNT"
+    
+    # Check if it's using Docker volume (should show /dev/xxx, not host path)
+    if echo "$DAEMON_MOUNT" | grep -q "^/dev/"; then
+        echo "   ✅ Daemon Container: Using Docker volume (correct)"
+    elif echo "$DAEMON_MOUNT" | grep -q "No mount found"; then
+        echo "   ❌ Daemon Container: No deploy-queue mount found"
+    else
+        echo "   ⚠️  Daemon Container: Using bind mount (may cause issues)"
+    fi
 else
     echo "   ❌ Daemon container not running - cannot check mounts"
 fi
