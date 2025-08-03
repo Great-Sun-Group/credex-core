@@ -91,7 +91,20 @@ deploy_credex_core() {
     
     # Build new image
     log "Building credex-core image from directory: $deploy_dir"
-    docker build --target production -t credex-core-deployment:latest "$deploy_dir"
+    log "Current working directory: $(pwd)"
+    log "Deploy directory contents: $(ls -la "$deploy_dir" | head -10)"
+    
+    # Build with explicit context and no cache to avoid fallbacks
+    if ! docker build --no-cache --target production -t credex-core-deployment:latest "$deploy_dir"; then
+        log "❌ ERROR: Docker build failed - stopping deployment to expose root cause"
+        log "Build context directory: $deploy_dir"
+        log "Directory exists: $(test -d "$deploy_dir" && echo "YES" || echo "NO")"
+        log "Dockerfile exists: $(test -f "$deploy_dir/Dockerfile" && echo "YES" || echo "NO")"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
+    
+    log "✅ Docker build completed successfully"
     
     # Execute blue-green deployment
     log "Executing blue-green credex-core deployment"
