@@ -40,17 +40,13 @@
 
     <h3>Queue-Based Deployment System</h3>
     <p>
-      The deployment system uses a robust queue-based architecture that eliminates circular dependency issues and ensures reliable deployments:
+      The deployment system uses a robust queue-based architecture without circular dependency issues, ensuring reliable deployments:
     </p>
 
     <pre><code>GitHub Repository → GitHub Actions → Container API → Deployment Queue → Host Daemon → Docker Commands
                                               ↓
                                          202 Accepted
                                       (immediate response)</code></pre>
-
-    <div class="alert alert-success">
-      <strong>Problem Solved:</strong> The original deployment system had a circular dependency where containers tried to replace themselves, causing infinite hangs. The new queue-based system eliminates this by processing deployments outside the containers being deployed.
-    </div>
 
     <h4>System Components</h4>
     <ul>
@@ -191,6 +187,32 @@
     <ul>
       <li><strong>Versioned APK</strong>: http://localhost:4000/downloads/vimbisopay-{version}.apk</li>
       <li><strong>Latest APK</strong>: http://localhost:4000/downloads/vimbisopay-latest.apk</li>
+    </ul>
+
+    <h2>Best Practices</h2>
+
+    <h3>Development Workflow</h3>
+    <ol>
+      <li>Develop and test changes locally</li>
+      <li>Push to <code>prod</code> branch for automatic deployment (credex-core, vimbiso-chatserver)</li>
+      <li>Use manual dispatch for mobile app deployments with appropriate update classification</li>
+      <li>Monitor deployment logs and verify service health after deployment</li>
+    </ol>
+
+    <h3>Version Management</h3>
+    <ul>
+      <li>Use semantic versioning for all releases</li>
+      <li>Classify updates appropriately (required vs optional)</li>
+      <li>Include meaningful release notes for mobile deployments</li>
+      <li>Test deployments in development environment first</li>
+    </ul>
+
+    <h3>Security</h3>
+    <ul>
+      <li>Rotate deployment tokens regularly</li>
+      <li>Monitor deployment logs for unauthorized access attempts</li>
+      <li>Keep local production environment secure and updated</li>
+      <li>Use HTTPS in production (configure reverse proxy if needed)</li>
     </ul>
 
     <h2>Troubleshooting</h2>
@@ -384,32 +406,6 @@ docker logs vimbiso-chatserver-prod --tail 50</code></pre>
       <li><strong>Direct deployment</strong>: No container registry or ECS deployments</li>
       <li><strong>Local file storage</strong>: APK files stored locally instead of S3</li>
       <li><strong>Simplified authentication</strong>: Single deployment token instead of AWS credentials</li>
-    </ul>
-
-    <h2>Best Practices</h2>
-
-    <h3>Development Workflow</h3>
-    <ol>
-      <li>Develop and test changes locally</li>
-      <li>Push to <code>prod</code> branch for automatic deployment (credex-core, vimbiso-chatserver)</li>
-      <li>Use manual dispatch for mobile app deployments with appropriate update classification</li>
-      <li>Monitor deployment logs and verify service health after deployment</li>
-    </ol>
-
-    <h3>Version Management</h3>
-    <ul>
-      <li>Use semantic versioning for all releases</li>
-      <li>Classify updates appropriately (required vs optional)</li>
-      <li>Include meaningful release notes for mobile deployments</li>
-      <li>Test deployments in development environment first</li>
-    </ul>
-
-    <h3>Security</h3>
-    <ul>
-      <li>Rotate deployment tokens regularly</li>
-      <li>Monitor deployment logs for unauthorized access attempts</li>
-      <li>Keep local production environment secure and updated</li>
-      <li>Use HTTPS in production (configure reverse proxy if needed)</li>
     </ul>
 
     <hr>
