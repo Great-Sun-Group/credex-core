@@ -130,10 +130,10 @@ deploy_credex_core() {
     log "✅ Successfully pulled latest code from GitHub branch: $branch"
     
     # Copy environment files
-    if [ -f "$SOURCE_DIR/.env.prod" ]; then
-        cp "$SOURCE_DIR/.env.prod" "$deploy_dir/.env.prod" || log "Warning: Could not copy .env.prod"
+    if [ -f "$SOURCE_DIR/prod-config/.env.prod" ]; then
+        cp "$SOURCE_DIR/prod-config/.env.prod" "$deploy_dir/.env.prod" || log "Warning: Could not copy .env.prod"
     else
-        log "Warning: .env.prod not found at $SOURCE_DIR/.env.prod"
+        log "Warning: .env.prod not found at $SOURCE_DIR/prod-config/.env.prod"
     fi
     
     # Build new image
@@ -164,7 +164,7 @@ deploy_credex_core() {
     log "Starting new container on test port 4001 for health checking with Docker volume"
     docker run -d \
         --name credex-core-prod-new \
-        --env-file "$SOURCE_DIR/.env.prod" \
+        --env-file "$SOURCE_DIR/prod-config/.env.prod" \
         -e NODE_ENV=production \
         -e PORT=4000 \
         -e LOG_LEVEL=info \
@@ -225,7 +225,7 @@ deploy_credex_core() {
         log "Starting new production container on port 4000 with Docker volume"
         docker run -d \
             --name credex-core-prod \
-            --env-file "$SOURCE_DIR/.env.prod" \
+            --env-file "$SOURCE_DIR/prod-config/.env.prod" \
             -e NODE_ENV=production \
             -e PORT=4000 \
             -e LOG_LEVEL=info \
@@ -335,7 +335,7 @@ deploy_chatserver() {
     log "Starting new chatserver container"
     docker run -d \
         --name vimbiso-chatserver-prod \
-        --env-file "$SOURCE_DIR/.env.prod" \
+        --env-file "$SOURCE_DIR/prod-config/.env.prod" \
         -e REDIS_URL=redis://redis-state-prod:6379/0 \
         -e USE_PROGRESSIVE_FLOW=True \
         -e PORT=9000 \
