@@ -20,6 +20,8 @@ services:
       - ./backups/credex-core:/app/backups
       # Mount source code for deployment operations (read-write for git operations)
       - .:/app/source
+      # Mount shared deployment queue
+      - deploy-queue:/app/source/deploy-queue
       # Mount docker socket for deployment operations
       - /var/run/docker.sock:/var/run/docker.sock
       # Mount docker-compose files for deployment
@@ -161,6 +163,8 @@ services:
     volumes:
       # Mount source code for deployment operations
       - .:/app/source
+      # Mount shared deployment queue
+      - deploy-queue:/app/source/deploy-queue
       # Mount docker socket for deployment operations
       - /var/run/docker.sock:/var/run/docker.sock
       # Mount vimbiso-chatserver if it exists
@@ -214,6 +218,7 @@ services:
 volumes:
   redis-prod-data:
   vimbiso-prod-data:
+  deploy-queue:
 
 networks:
   credex-prod-network:
