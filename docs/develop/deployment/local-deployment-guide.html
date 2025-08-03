@@ -40,17 +40,13 @@
 
     <h3>Queue-Based Deployment System</h3>
     <p>
-      The deployment system uses a robust queue-based architecture that eliminates circular dependency issues and ensures reliable deployments:
+      The deployment system uses a robust queue-based architecture without circular dependency issues, ensuring reliable deployments:
     </p>
 
     <pre><code>GitHub Repository → GitHub Actions → Container API → Deployment Queue → Host Daemon → Docker Commands
                                               ↓
                                          202 Accepted
                                       (immediate response)</code></pre>
-
-    <div class="alert alert-success">
-      <strong>Problem Solved:</strong> The original deployment system had a circular dependency where containers tried to replace themselves, causing infinite hangs. The new queue-based system eliminates this by processing deployments outside the containers being deployed.
-    </div>
 
     <h4>System Components</h4>
     <ul>
@@ -193,6 +189,32 @@
       <li><strong>Latest APK</strong>: http://localhost:4000/downloads/vimbisopay-latest.apk</li>
     </ul>
 
+    <h2>Best Practices</h2>
+
+    <h3>Development Workflow</h3>
+    <ol>
+      <li>Develop and test changes locally</li>
+      <li>Push to <code>prod</code> branch for automatic deployment (credex-core, vimbiso-chatserver)</li>
+      <li>Use manual dispatch for mobile app deployments with appropriate update classification</li>
+      <li>Monitor deployment logs and verify service health after deployment</li>
+    </ol>
+
+    <h3>Version Management</h3>
+    <ul>
+      <li>Use semantic versioning for all releases</li>
+      <li>Classify updates appropriately (required vs optional)</li>
+      <li>Include meaningful release notes for mobile deployments</li>
+      <li>Test deployments in development environment first</li>
+    </ul>
+
+    <h3>Security</h3>
+    <ul>
+      <li>Rotate deployment tokens regularly</li>
+      <li>Monitor deployment logs for unauthorized access attempts</li>
+      <li>Keep local production environment secure and updated</li>
+      <li>Use HTTPS in production (configure reverse proxy if needed)</li>
+    </ul>
+
     <h2>Troubleshooting</h2>
 
     <h3>Deployment System Issues</h3>
@@ -247,6 +269,38 @@ docker ps --filter "name=deploy-daemon"
 
 # Check daemon logs
 docker logs credex-deploy-daemon --follow</code></pre>
+      </li>
+    </ul>
+
+    <h4>Deployment Succeeds But Website Shows Old Code</h4>
+    <ul>
+      <li><strong>Cause</strong>: Multiple potential issues with git operations or volume mounts</li>
+      <li><strong>Root Causes</strong>:
+        <ul>
+          <li>Volume mount conflicts between containers</li>
+          <li>Git pulling from local directory instead of remote GitHub repository</li>
+          <li>Docker build cache using old layers</li>
+        </ul>
+      </li>
+      <li><strong>Solution</strong>: Follow these diagnostic steps:
+        <pre><code># 1. Verify both containers see the same queue directory
+docker exec credex-core-prod ls -la /app/source/deploy-queue/
+docker exec credex-deploy-daemon ls -la /app/source/deploy-queue/
+
+# 2. Check deployment logs for git operations
+docker logs credex-deploy-daemon --tail 100 | grep -i "git\|clone\|pull"
+
+# 3. Verify git remote configuration in deployment logs
+# Look for "From /app/source" (bad) vs "From https://github.com" (good)
+
+# 4. If volume mount issues detected, recreate containers
+docker-compose -f docker-compose.prod.yml down credex-core-prod deploy-daemon
+docker-compose -f docker-compose.prod.yml up -d credex-core-prod deploy-daemon</code></pre>
+      </li>
+      <li><strong>Prevention</strong>: Ensure docker-compose.prod.yml uses consistent volume mounts:
+        <pre><code># Both containers should use local directory mounts, not named volumes
+- ./deploy-queue:/app/source/deploy-queue  # ✅ Correct
+- deploy-queue:/app/source/deploy-queue    # ❌ Causes conflicts</code></pre>
       </li>
     </ul>
 
@@ -352,32 +406,6 @@ docker logs vimbiso-chatserver-prod --tail 50</code></pre>
       <li><strong>Direct deployment</strong>: No container registry or ECS deployments</li>
       <li><strong>Local file storage</strong>: APK files stored locally instead of S3</li>
       <li><strong>Simplified authentication</strong>: Single deployment token instead of AWS credentials</li>
-    </ul>
-
-    <h2>Best Practices</h2>
-
-    <h3>Development Workflow</h3>
-    <ol>
-      <li>Develop and test changes locally</li>
-      <li>Push to <code>prod</code> branch for automatic deployment (credex-core, vimbiso-chatserver)</li>
-      <li>Use manual dispatch for mobile app deployments with appropriate update classification</li>
-      <li>Monitor deployment logs and verify service health after deployment</li>
-    </ol>
-
-    <h3>Version Management</h3>
-    <ul>
-      <li>Use semantic versioning for all releases</li>
-      <li>Classify updates appropriately (required vs optional)</li>
-      <li>Include meaningful release notes for mobile deployments</li>
-      <li>Test deployments in development environment first</li>
-    </ul>
-
-    <h3>Security</h3>
-    <ul>
-      <li>Rotate deployment tokens regularly</li>
-      <li>Monitor deployment logs for unauthorized access attempts</li>
-      <li>Keep local production environment secure and updated</li>
-      <li>Use HTTPS in production (configure reverse proxy if needed)</li>
     </ul>
 
     <hr>
