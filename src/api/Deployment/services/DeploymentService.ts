@@ -45,7 +45,7 @@ export class DeploymentService {
   }
 
   public async queueDeployment(service: string, branch: string, requestId: string): Promise<void> {
-    const queueDir = path.join('/app', 'source', 'deploy-queue');
+    const queueDir = path.join('/app', 'deploy-queue');
     
     // Ensure queue directory exists
     await fs.mkdir(queueDir, { recursive: true });
