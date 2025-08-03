@@ -173,8 +173,8 @@ deploy_credex_core() {
         log "Stopping test container"
         docker stop credex-core-prod-new
         
-        # Start new production container on production port
-        log "Starting new production container on port 4000"
+        # Start new production container on production port with Docker volume
+        log "Starting new production container on port 4000 with Docker volume"
         docker run -d \
             --name credex-core-prod \
             --env-file "$SOURCE_DIR/.env.prod" \
@@ -191,6 +191,8 @@ deploy_credex_core() {
             --restart unless-stopped \
             --network credex-prod-network \
             credex-core-deployment:latest
+        
+        log "✅ Production container started with Docker volume: credex-core_deploy-queue:/app/deploy-queue"
         
         # Wait for production container to start
         sleep 10
