@@ -218,7 +218,6 @@ services:
 volumes:
   redis-prod-data:
   vimbiso-prod-data:
-  deploy-queue:
 
 networks:
   credex-prod-network:
