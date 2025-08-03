@@ -6,8 +6,8 @@
 set -e
 
 # Configuration
-QUEUE_DIR="${QUEUE_DIR:-/app/source/deploy-queue}"
-LOG_FILE="${LOG_FILE:-/app/source/logs/deployment-daemon.log}"
+QUEUE_DIR="${QUEUE_DIR:-/app/deploy-queue}"
+LOG_FILE="${LOG_FILE:-/app/logs/deployment-daemon.log}"
 SOURCE_DIR="${SOURCE_DIR:-/app/source}"
 LOCK_FILE="/tmp/credex-deploy.lock"
 
