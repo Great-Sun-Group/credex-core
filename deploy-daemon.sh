@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-QUEUE_DIR="${QUEUE_DIR:-/app/deploy-queue}"
+QUEUE_DIR="${QUEUE_DIR:-/app/source/deploy-queue}"
 LOG_FILE="${LOG_FILE:-/app/logs/deployment-daemon.log}"
 SOURCE_DIR="${SOURCE_DIR:-/app/source}"
 LOCK_FILE="/tmp/credex-deploy.lock"
@@ -168,7 +168,7 @@ deploy_credex_core() {
             -v "$SOURCE_DIR/logs/prod:/app/logs" \
             -v "$SOURCE_DIR/backups/credex-core:/app/backups" \
             -v "$SOURCE_DIR:/app/source" \
-            -v "$QUEUE_DIR:/app/deploy-queue" \
+            -v "$SOURCE_DIR/deploy-queue:/app/deploy-queue" \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$SOURCE_DIR/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro" \
             --restart unless-stopped \
