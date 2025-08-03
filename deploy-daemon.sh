@@ -52,35 +52,74 @@ deploy_credex_core() {
     
     log "Starting credex-core deployment: $deployment_id (branch: $branch)"
     
-    # Create deployment directory
+    # Create deployment directory with proper error handling
     local deploy_dir="/tmp/deployment-credex-core-$(date +%s)"
+    
+    # Ensure /tmp directory is accessible and create deployment directory
+    if ! mkdir -p "$deploy_dir"; then
+        log "❌ ERROR: Failed to create deployment directory: $deploy_dir"
+        return 1
+    fi
+    
+    log "Created deployment directory: $deploy_dir"
     
     # Clone repository from remote GitHub to deployment directory
     log "Cloning repository from GitHub to $deploy_dir"
-    git clone https://github.com/Great-Sun-Group/credex-core.git "$deploy_dir"
+    if ! git clone https://github.com/Great-Sun-Group/credex-core.git "$deploy_dir"; then
+        log "❌ ERROR: Failed to clone repository to $deploy_dir"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
     
-    # Checkout specified branch
-    cd "$deploy_dir"
+    # Checkout specified branch with proper error handling
+    log "Changing to deployment directory: $deploy_dir"
+    if ! cd "$deploy_dir"; then
+        log "❌ ERROR: Failed to change to deployment directory: $deploy_dir"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
+    
+    log "✅ Successfully changed to deployment directory"
     
     # Ensure we're using the correct remote origin
     log "Configuring remote origin to GitHub"
-    git remote set-url origin https://github.com/Great-Sun-Group/credex-core.git
+    if ! git remote set-url origin https://github.com/Great-Sun-Group/credex-core.git; then
+        log "❌ ERROR: Failed to set remote origin URL"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
+    
     git remote -v
     
     # Fetch and checkout the specified branch
     log "Fetching latest changes from GitHub"
-    git fetch origin
-    git checkout "$branch"
+    if ! git fetch origin; then
+        log "❌ ERROR: Failed to fetch from GitHub"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
+    
+    log "Checking out branch: $branch"
+    if ! git checkout "$branch"; then
+        log "❌ ERROR: Failed to checkout branch: $branch"
+        log "Available branches: $(git branch -r)"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
     
     # Force pull from remote GitHub repository
     log "Pulling latest code from GitHub branch: $branch"
-    git pull origin "$branch"
+    if ! git pull origin "$branch"; then
+        log "❌ ERROR: Failed to pull from GitHub branch: $branch"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
     
     # Verify we have the latest commit
     log "Current commit: $(git rev-parse HEAD)"
     log "Latest commit on GitHub $branch: $(git rev-parse origin/$branch)"
     
-    log "Successfully pulled latest code from GitHub branch: $branch"
+    log "✅ Successfully pulled latest code from GitHub branch: $branch"
     
     # Copy environment files
     if [ -f "$SOURCE_DIR/.env.prod" ]; then
@@ -114,7 +153,7 @@ deploy_credex_core() {
     docker rm credex-core-prod-new 2>/dev/null || true
     
     # Start new container on test port (4001) for health checking
-    log "Starting new container on test port 4001 for health checking"
+    log "Starting new container on test port 4001 for health checking with Docker volume"
     docker run -d \
         --name credex-core-prod-new \
         --env-file "$SOURCE_DIR/.env.prod" \
@@ -125,6 +164,7 @@ deploy_credex_core() {
         -v "$SOURCE_DIR/logs/prod:/app/logs" \
         -v "$SOURCE_DIR/backups/credex-core:/app/backups" \
         -v "$SOURCE_DIR:/app/source" \
+        -v credex-core_deploy-queue:/app/deploy-queue \
         -v /var/run/docker.sock:/var/run/docker.sock \
         -v "$SOURCE_DIR/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro" \
         --network credex-prod-network \
