@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-QUEUE_DIR="${QUEUE_DIR:-/app/source/deploy-queue}"
+QUEUE_DIR="${QUEUE_DIR:-/app/deploy-queue}"
 LOG_FILE="${LOG_FILE:-/app/logs/deployment-daemon.log}"
 SOURCE_DIR="${SOURCE_DIR:-/app/source}"
 LOCK_FILE="/tmp/credex-deploy.lock"
@@ -168,7 +168,7 @@ deploy_credex_core() {
             -v "$SOURCE_DIR/logs/prod:/app/logs" \
             -v "$SOURCE_DIR/backups/credex-core:/app/backups" \
             -v "$SOURCE_DIR:/app/source" \
-            -v "$SOURCE_DIR/deploy-queue:/app/deploy-queue" \
+            -v credex-core_deploy-queue:/app/deploy-queue \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$SOURCE_DIR/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro" \
             --restart unless-stopped \
@@ -373,18 +373,44 @@ main() {
     log "Source directory: $SOURCE_DIR"
     log "Lock file: $LOCK_FILE"
     
-    # Check if directories are accessible
+    # Enhanced directory accessibility checks
     if [ -d "$QUEUE_DIR" ]; then
         log "Queue directory exists and is accessible"
+        log "Queue directory path: $QUEUE_DIR"
+        log "Queue directory permissions: $(ls -ld "$QUEUE_DIR" 2>/dev/null || echo 'cannot read permissions')"
         log "Queue directory contents: $(ls -la "$QUEUE_DIR" 2>/dev/null || echo 'empty or inaccessible')"
+        
+        # Test write permissions
+        local test_file="$QUEUE_DIR/.daemon-write-test-$(date +%s)"
+        if echo "test" > "$test_file" 2>/dev/null; then
+            log "✅ Queue directory is writable"
+            rm -f "$test_file"
+        else
+            log "❌ ERROR: Queue directory is not writable"
+        fi
+        
+        # Check if it's a Docker volume mount
+        if mount | grep -q "$QUEUE_DIR"; then
+            log "✅ Queue directory is mounted (likely Docker volume)"
+            log "Mount info: $(mount | grep "$QUEUE_DIR")"
+        else
+            log "⚠️  Queue directory is not mounted (may be local directory)"
+        fi
     else
-        log "ERROR: Queue directory does not exist or is not accessible"
+        log "❌ ERROR: Queue directory does not exist or is not accessible"
+        log "Attempting to create queue directory: $QUEUE_DIR"
+        if mkdir -p "$QUEUE_DIR" 2>/dev/null; then
+            log "✅ Successfully created queue directory"
+        else
+            log "❌ ERROR: Failed to create queue directory"
+        fi
     fi
     
     if [ -d "$SOURCE_DIR" ]; then
-        log "Source directory exists and is accessible"
+        log "✅ Source directory exists and is accessible"
+        log "Source directory path: $SOURCE_DIR"
     else
-        log "ERROR: Source directory does not exist or is not accessible"
+        log "❌ ERROR: Source directory does not exist or is not accessible"
     fi
     
     # Ensure Docker network exists
