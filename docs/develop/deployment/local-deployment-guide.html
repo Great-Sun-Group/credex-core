@@ -250,6 +250,38 @@ docker logs credex-deploy-daemon --follow</code></pre>
       </li>
     </ul>
 
+    <h4>Deployment Succeeds But Website Shows Old Code</h4>
+    <ul>
+      <li><strong>Cause</strong>: Multiple potential issues with git operations or volume mounts</li>
+      <li><strong>Root Causes</strong>:
+        <ul>
+          <li>Volume mount conflicts between containers</li>
+          <li>Git pulling from local directory instead of remote GitHub repository</li>
+          <li>Docker build cache using old layers</li>
+        </ul>
+      </li>
+      <li><strong>Solution</strong>: Follow these diagnostic steps:
+        <pre><code># 1. Verify both containers see the same queue directory
+docker exec credex-core-prod ls -la /app/source/deploy-queue/
+docker exec credex-deploy-daemon ls -la /app/source/deploy-queue/
+
+# 2. Check deployment logs for git operations
+docker logs credex-deploy-daemon --tail 100 | grep -i "git\|clone\|pull"
+
+# 3. Verify git remote configuration in deployment logs
+# Look for "From /app/source" (bad) vs "From https://github.com" (good)
+
+# 4. If volume mount issues detected, recreate containers
+docker-compose -f docker-compose.prod.yml down credex-core-prod deploy-daemon
+docker-compose -f docker-compose.prod.yml up -d credex-core-prod deploy-daemon</code></pre>
+      </li>
+      <li><strong>Prevention</strong>: Ensure docker-compose.prod.yml uses consistent volume mounts:
+        <pre><code># Both containers should use local directory mounts, not named volumes
+- ./deploy-queue:/app/source/deploy-queue  # ✅ Correct
+- deploy-queue:/app/source/deploy-queue    # ❌ Causes conflicts</code></pre>
+      </li>
+    </ul>
+
     <h3>Mobile App Issues</h3>
 
     <h4>Mobile App Build Failed</h4>

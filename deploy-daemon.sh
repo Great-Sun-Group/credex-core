@@ -55,15 +55,32 @@ deploy_credex_core() {
     # Create deployment directory
     local deploy_dir="/tmp/deployment-credex-core-$(date +%s)"
     
-    # Clone repository to deployment directory
-    log "Cloning repository to $deploy_dir"
-    git clone "$SOURCE_DIR" "$deploy_dir"
+    # Clone repository from remote GitHub to deployment directory
+    log "Cloning repository from GitHub to $deploy_dir"
+    git clone https://github.com/Great-Sun-Group/credex-core.git "$deploy_dir"
     
     # Checkout specified branch
     cd "$deploy_dir"
+    
+    # Ensure we're using the correct remote origin
+    log "Configuring remote origin to GitHub"
+    git remote set-url origin https://github.com/Great-Sun-Group/credex-core.git
+    git remote -v
+    
+    # Fetch and checkout the specified branch
+    log "Fetching latest changes from GitHub"
     git fetch origin
     git checkout "$branch"
+    
+    # Force pull from remote GitHub repository
+    log "Pulling latest code from GitHub branch: $branch"
     git pull origin "$branch"
+    
+    # Verify we have the latest commit
+    log "Current commit: $(git rev-parse HEAD)"
+    log "Latest commit on GitHub $branch: $(git rev-parse origin/$branch)"
+    
+    log "Successfully pulled latest code from GitHub branch: $branch"
     
     # Copy environment files
     cp "$SOURCE_DIR/.env.prod" "$deploy_dir/.env.prod" || log "Warning: Could not copy .env.prod"

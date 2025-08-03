@@ -287,7 +287,8 @@ export const applyAuthMiddleware = (app: Application) => {
       req.path === "/api/deploy-core" || // Deploy core endpoint has its own token validation
       req.path === "/api/deploy-chatserver" || // Deploy chatserver endpoint has its own token validation
       req.path === "/api/upload-apk" || // APK upload endpoint has its own token validation
-      req.path.includes("/downloads/") // APK download endpoints
+      req.path.includes("/downloads/") || // APK download endpoints
+      req.path.startsWith("/api/deploy") // Catch all deployment endpoints
     ) {
       logger.info("[SC3] Skipping auth middleware for path", {
         path: req.path,
