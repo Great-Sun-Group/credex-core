@@ -52,6 +52,12 @@ deploy_credex_core() {
     
     log "Starting credex-core deployment: $deployment_id (branch: $branch)"
     
+    # Ensure we're in a stable working directory
+    cd /app || {
+        log "❌ ERROR: Failed to change to /app directory"
+        return 1
+    }
+    
     # Create deployment directory with proper error handling
     local deploy_dir="/tmp/deployment-credex-core-$(date +%s)"
     
@@ -63,10 +69,12 @@ deploy_credex_core() {
     
     log "Created deployment directory: $deploy_dir"
     
-    # Clone repository from remote GitHub to deployment directory
+    # Clone repository from remote GitHub to deployment directory with stable working directory
     log "Cloning repository from GitHub to $deploy_dir"
+    log "Current working directory before clone: $(pwd)"
     if ! git clone https://github.com/Great-Sun-Group/credex-core.git "$deploy_dir"; then
         log "❌ ERROR: Failed to clone repository to $deploy_dir"
+        log "Git clone error details: $(git clone https://github.com/Great-Sun-Group/credex-core.git "$deploy_dir" 2>&1 || true)"
         rm -rf "$deploy_dir"
         return 1
     fi
