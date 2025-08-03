@@ -168,6 +168,7 @@ deploy_credex_core() {
             -v "$SOURCE_DIR/logs/prod:/app/logs" \
             -v "$SOURCE_DIR/backups/credex-core:/app/backups" \
             -v "$SOURCE_DIR:/app/source" \
+            -v "$SOURCE_DIR/deploy-queue:/app/deploy-queue" \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$SOURCE_DIR/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro" \
             --restart unless-stopped \
