@@ -83,11 +83,15 @@ deploy_credex_core() {
     log "Successfully pulled latest code from GitHub branch: $branch"
     
     # Copy environment files
-    cp "$SOURCE_DIR/.env.prod" "$deploy_dir/.env.prod" || log "Warning: Could not copy .env.prod"
+    if [ -f "$SOURCE_DIR/.env.prod" ]; then
+        cp "$SOURCE_DIR/.env.prod" "$deploy_dir/.env.prod" || log "Warning: Could not copy .env.prod"
+    else
+        log "Warning: .env.prod not found at $SOURCE_DIR/.env.prod"
+    fi
     
     # Build new image
-    log "Building credex-core image"
-    docker build --target production -t credex-core-deployment:latest .
+    log "Building credex-core image from directory: $deploy_dir"
+    docker build --target production -t credex-core-deployment:latest "$deploy_dir"
     
     # Execute blue-green deployment
     log "Executing blue-green credex-core deployment"
