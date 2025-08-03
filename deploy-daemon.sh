@@ -6,8 +6,8 @@
 set -e
 
 # Configuration
-QUEUE_DIR="${QUEUE_DIR:-/app/source/deploy-queue}"
-LOG_FILE="${LOG_FILE:-/app/source/logs/deployment-daemon.log}"
+QUEUE_DIR="${QUEUE_DIR:-/app/deploy-queue}"
+LOG_FILE="${LOG_FILE:-/app/logs/deployment-daemon.log}"
 SOURCE_DIR="${SOURCE_DIR:-/app/source}"
 LOCK_FILE="/tmp/credex-deploy.lock"
 
@@ -52,42 +52,106 @@ deploy_credex_core() {
     
     log "Starting credex-core deployment: $deployment_id (branch: $branch)"
     
-    # Create deployment directory
+    # Ensure we're in a stable working directory
+    cd /app || {
+        log "❌ ERROR: Failed to change to /app directory"
+        return 1
+    }
+    
+    # Create deployment directory with proper error handling
     local deploy_dir="/tmp/deployment-credex-core-$(date +%s)"
     
-    # Clone repository from remote GitHub to deployment directory
-    log "Cloning repository from GitHub to $deploy_dir"
-    git clone https://github.com/Great-Sun-Group/credex-core.git "$deploy_dir"
+    # Ensure /tmp directory is accessible and create deployment directory
+    if ! mkdir -p "$deploy_dir"; then
+        log "❌ ERROR: Failed to create deployment directory: $deploy_dir"
+        return 1
+    fi
     
-    # Checkout specified branch
-    cd "$deploy_dir"
+    log "Created deployment directory: $deploy_dir"
+    
+    # Clone repository from remote GitHub to deployment directory with stable working directory
+    log "Cloning repository from GitHub to $deploy_dir"
+    log "Current working directory before clone: $(pwd)"
+    if ! git clone https://github.com/Great-Sun-Group/credex-core.git "$deploy_dir"; then
+        log "❌ ERROR: Failed to clone repository to $deploy_dir"
+        log "Git clone error details: $(git clone https://github.com/Great-Sun-Group/credex-core.git "$deploy_dir" 2>&1 || true)"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
+    
+    # Checkout specified branch with proper error handling
+    log "Changing to deployment directory: $deploy_dir"
+    if ! cd "$deploy_dir"; then
+        log "❌ ERROR: Failed to change to deployment directory: $deploy_dir"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
+    
+    log "✅ Successfully changed to deployment directory"
     
     # Ensure we're using the correct remote origin
     log "Configuring remote origin to GitHub"
-    git remote set-url origin https://github.com/Great-Sun-Group/credex-core.git
+    if ! git remote set-url origin https://github.com/Great-Sun-Group/credex-core.git; then
+        log "❌ ERROR: Failed to set remote origin URL"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
+    
     git remote -v
     
     # Fetch and checkout the specified branch
     log "Fetching latest changes from GitHub"
-    git fetch origin
-    git checkout "$branch"
+    if ! git fetch origin; then
+        log "❌ ERROR: Failed to fetch from GitHub"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
+    
+    log "Checking out branch: $branch"
+    if ! git checkout "$branch"; then
+        log "❌ ERROR: Failed to checkout branch: $branch"
+        log "Available branches: $(git branch -r)"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
     
     # Force pull from remote GitHub repository
     log "Pulling latest code from GitHub branch: $branch"
-    git pull origin "$branch"
+    if ! git pull origin "$branch"; then
+        log "❌ ERROR: Failed to pull from GitHub branch: $branch"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
     
     # Verify we have the latest commit
     log "Current commit: $(git rev-parse HEAD)"
     log "Latest commit on GitHub $branch: $(git rev-parse origin/$branch)"
     
-    log "Successfully pulled latest code from GitHub branch: $branch"
+    log "✅ Successfully pulled latest code from GitHub branch: $branch"
     
     # Copy environment files
-    cp "$SOURCE_DIR/.env.prod" "$deploy_dir/.env.prod" || log "Warning: Could not copy .env.prod"
+    if [ -f "$SOURCE_DIR/prod-config/.env.prod" ]; then
+        cp "$SOURCE_DIR/prod-config/.env.prod" "$deploy_dir/.env.prod" || log "Warning: Could not copy .env.prod"
+    else
+        log "Warning: .env.prod not found at $SOURCE_DIR/prod-config/.env.prod"
+    fi
     
     # Build new image
-    log "Building credex-core image"
-    docker build --target production -t credex-core-deployment:latest .
+    log "Building credex-core image from directory: $deploy_dir"
+    log "Current working directory: $(pwd)"
+    log "Deploy directory contents: $(ls -la "$deploy_dir" | head -10)"
+    
+    # Build with explicit context and no cache to avoid fallbacks
+    if ! docker build --no-cache --target production -t credex-core-deployment:latest "$deploy_dir"; then
+        log "❌ ERROR: Docker build failed - stopping deployment to expose root cause"
+        log "Build context directory: $deploy_dir"
+        log "Directory exists: $(test -d "$deploy_dir" && echo "YES" || echo "NO")"
+        log "Dockerfile exists: $(test -f "$deploy_dir/Dockerfile" && echo "YES" || echo "NO")"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
+    
+    log "✅ Docker build completed successfully"
     
     # Execute blue-green deployment
     log "Executing blue-green credex-core deployment"
@@ -97,10 +161,10 @@ deploy_credex_core() {
     docker rm credex-core-prod-new 2>/dev/null || true
     
     # Start new container on test port (4001) for health checking
-    log "Starting new container on test port 4001 for health checking"
+    log "Starting new container on test port 4001 for health checking with Docker volume"
     docker run -d \
         --name credex-core-prod-new \
-        --env-file "$SOURCE_DIR/.env.prod" \
+        --env-file "$SOURCE_DIR/prod-config/.env.prod" \
         -e NODE_ENV=production \
         -e PORT=4000 \
         -e LOG_LEVEL=info \
@@ -108,6 +172,7 @@ deploy_credex_core() {
         -v "$SOURCE_DIR/logs/prod:/app/logs" \
         -v "$SOURCE_DIR/backups/credex-core:/app/backups" \
         -v "$SOURCE_DIR:/app/source" \
+        -v credex-core_deploy-queue:/app/deploy-queue \
         -v /var/run/docker.sock:/var/run/docker.sock \
         -v "$SOURCE_DIR/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro" \
         --network credex-prod-network \
@@ -156,11 +221,11 @@ deploy_credex_core() {
         log "Stopping test container"
         docker stop credex-core-prod-new
         
-        # Start new production container on production port
-        log "Starting new production container on port 4000"
+        # Start new production container on production port with Docker volume
+        log "Starting new production container on port 4000 with Docker volume"
         docker run -d \
             --name credex-core-prod \
-            --env-file "$SOURCE_DIR/.env.prod" \
+            --env-file "$SOURCE_DIR/prod-config/.env.prod" \
             -e NODE_ENV=production \
             -e PORT=4000 \
             -e LOG_LEVEL=info \
@@ -168,11 +233,14 @@ deploy_credex_core() {
             -v "$SOURCE_DIR/logs/prod:/app/logs" \
             -v "$SOURCE_DIR/backups/credex-core:/app/backups" \
             -v "$SOURCE_DIR:/app/source" \
+            -v credex-core_deploy-queue:/app/deploy-queue \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "$SOURCE_DIR/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro" \
             --restart unless-stopped \
             --network credex-prod-network \
             credex-core-deployment:latest
+        
+        log "✅ Production container started with Docker volume: credex-core_deploy-queue:/app/deploy-queue"
         
         # Wait for production container to start
         sleep 10
@@ -267,7 +335,7 @@ deploy_chatserver() {
     log "Starting new chatserver container"
     docker run -d \
         --name vimbiso-chatserver-prod \
-        --env-file "$SOURCE_DIR/.env.prod" \
+        --env-file "$SOURCE_DIR/prod-config/.env.prod" \
         -e REDIS_URL=redis://redis-state-prod:6379/0 \
         -e USE_PROGRESSIVE_FLOW=True \
         -e PORT=9000 \
@@ -372,18 +440,44 @@ main() {
     log "Source directory: $SOURCE_DIR"
     log "Lock file: $LOCK_FILE"
     
-    # Check if directories are accessible
+    # Enhanced directory accessibility checks
     if [ -d "$QUEUE_DIR" ]; then
         log "Queue directory exists and is accessible"
+        log "Queue directory path: $QUEUE_DIR"
+        log "Queue directory permissions: $(ls -ld "$QUEUE_DIR" 2>/dev/null || echo 'cannot read permissions')"
         log "Queue directory contents: $(ls -la "$QUEUE_DIR" 2>/dev/null || echo 'empty or inaccessible')"
+        
+        # Test write permissions
+        local test_file="$QUEUE_DIR/.daemon-write-test-$(date +%s)"
+        if echo "test" > "$test_file" 2>/dev/null; then
+            log "✅ Queue directory is writable"
+            rm -f "$test_file"
+        else
+            log "❌ ERROR: Queue directory is not writable"
+        fi
+        
+        # Check if it's a Docker volume mount
+        if mount | grep -q "$QUEUE_DIR"; then
+            log "✅ Queue directory is mounted (likely Docker volume)"
+            log "Mount info: $(mount | grep "$QUEUE_DIR")"
+        else
+            log "⚠️  Queue directory is not mounted (may be local directory)"
+        fi
     else
-        log "ERROR: Queue directory does not exist or is not accessible"
+        log "❌ ERROR: Queue directory does not exist or is not accessible"
+        log "Attempting to create queue directory: $QUEUE_DIR"
+        if mkdir -p "$QUEUE_DIR" 2>/dev/null; then
+            log "✅ Successfully created queue directory"
+        else
+            log "❌ ERROR: Failed to create queue directory"
+        fi
     fi
     
     if [ -d "$SOURCE_DIR" ]; then
-        log "Source directory exists and is accessible"
+        log "✅ Source directory exists and is accessible"
+        log "Source directory path: $SOURCE_DIR"
     else
-        log "ERROR: Source directory does not exist or is not accessible"
+        log "❌ ERROR: Source directory does not exist or is not accessible"
     fi
     
     # Ensure Docker network exists
