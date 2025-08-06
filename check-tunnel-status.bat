@@ -15,6 +15,10 @@ echo.
 echo === Testing Domain Connectivity ===
 echo Testing https://mycredex.app...
 curl -s -o nul -w "Status: %%{http_code} - Response Time: %%{time_total}s\n" https://mycredex.app/api-docs
+echo Testing https://vimbisopay.africa...
+curl -s -o nul -w "Status: %%{http_code} - Response Time: %%{time_total}s\n" https://vimbisopay.africa/health/
+echo Testing https://vimbisopay.co.zw...
+curl -s -o nul -w "Status: %%{http_code} - Response Time: %%{time_total}s\n" https://vimbisopay.co.zw/health/
 
 echo.
 echo === Tunnel List ===
@@ -25,5 +29,3 @@ echo.
 echo === Quick Actions ===
 echo To start tunnel: start-tunnel.bat
 echo To stop tunnel: taskkill /F /IM cloudflared.exe
-echo.
-pause
