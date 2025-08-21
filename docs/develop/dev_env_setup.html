@@ -289,7 +289,78 @@ npm run format       # Format code with Prettier</code></pre>
       <p><strong>Next Action</strong>: Configure Neo4j Desktop databases as outlined above</p>
     </blockquote>
 
+    <h2>📱 Flutter Mobile App Development</h2>
+
+    <h3>Prerequisites</h3>
+    <ul>
+      <li>Flutter SDK (latest stable version)</li>
+      <li>Android Studio with Android SDK</li>
+      <li>Java Development Kit (JDK) 17 or higher</li>
+      <li>Windows Developer Mode enabled (for symlink support)</li>
+    </ul>
+
+    <h3>Initial Setup for VimbisoPay Flutter App</h3>
+    <blockquote>
+      <p><strong>Location</strong>: <code>C:\Great-Sun-Group\vimbisopay\vimbisopay_app</code></p>
+    </blockquote>
+
+    <h4>✅ Completed Setup Steps</h4>
+    <ol>
+      <li>✅ Updated Android Gradle Plugin from 8.2.1 to 8.3.0</li>
+      <li>✅ Updated Gradle wrapper from 8.3 to 8.4</li>
+      <li>✅ Removed problematic dependency overrides</li>
+      <li>✅ Fixed Google Services configuration for debug builds</li>
+      <li>✅ Enabled Windows Developer Mode for symlink support</li>
+      <li>✅ Successfully built and deployed to Android device</li>
+    </ol>
+
+    <h4>🔧 Key Configuration Changes Made</h4>
+
+    <p><strong>Android Gradle Plugin Update</strong></p>
+    <pre><code># android/settings.gradle
+id "com.android.application" version "8.3.0" apply false
+
+# android/build.gradle  
+classpath 'com.android.tools.build:gradle:8.3.0'</code></pre>
+
+    <p><strong>Gradle Wrapper Update</strong></p>
+    <pre><code># android/gradle/wrapper/gradle-wrapper.properties
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-all.zip</code></pre>
+
+    <p><strong>Google Services Configuration</strong></p>
+    <p>Added client configurations for:</p>
+    <ul>
+      <li><code>com.vimbisopay.vimbisopay_app</code> (release)</li>
+      <li><code>com.vimbisopay.vimbisopay_app.debug</code> (debug)</li>
+    </ul>
+
+    <p><strong>Dependency Override Removal</strong></p>
+    <pre><code># Removed from pubspec.yaml
+dependency_overrides:
+  shared_preferences_android: 2.2.0</code></pre>
+
+    <h4>🚀 Running the Flutter App</h4>
+    <pre><code>cd "C:\Great-Sun-Group\vimbisopay\vimbisopay_app"
+flutter run -d DEVICE_ID --android-skip-build-dependency-validation</code></pre>
+
+    <h4>📱 Flutter Development Commands</h4>
+    <pre><code>flutter --version              # Check Flutter version
+flutter devices                # List available devices
+flutter pub get                # Get dependencies
+flutter pub upgrade            # Upgrade dependencies
+flutter clean                  # Clean build cache
+flutter build apk              # Build APK for release</code></pre>
+
     <h2>🐛 Troubleshooting</h2>
+
+    <h3>Flutter Build Issues</h3>
+    <ul>
+      <li><strong>Gradle Version Mismatch</strong>: Ensure Android Gradle Plugin and Gradle wrapper versions are compatible</li>
+      <li><strong>Google Services Error</strong>: Verify package names in google-services.json match your app's applicationId</li>
+      <li><strong>Dependency Conflicts</strong>: Remove dependency overrides and run <code>flutter pub upgrade</code></li>
+      <li><strong>Symlink Issues</strong>: Enable Windows Developer Mode in Settings > For developers</li>
+      <li><strong>JDK Version</strong>: Ensure JDK 17+ is installed and configured</li>
+    </ul>
 
     <h3>Neo4j Connection Issues</h3>
     <ul>

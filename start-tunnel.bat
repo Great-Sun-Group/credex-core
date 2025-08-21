@@ -1,5 +1,13 @@
 @echo off
 cd /d "C:\Great-Sun-Group\credex-core"
-echo Starting Cloudflare Tunnel...
-cloudflared.exe tunnel --config cloudflared-config.yml run
-pause
+echo Starting Cloudflare Tunnels...
+echo.
+echo Starting Credex Tunnel (mycredex.app)...
+start "Credex Tunnel" /D "C:\Great-Sun-Group\credex-core" cloudflared.exe tunnel --config cloudflared-config.yml run
+echo.
+echo Starting Vimbiso Tunnel (vimbisopay.africa, vimbisopay.co.zw)...
+start "Vimbiso Tunnel" /D "C:\Great-Sun-Group\credex-core" cloudflared.exe tunnel --config cloudflared-config-vimbiso.yml run
+echo.
+echo Both tunnels started in separate windows.
+echo Press any key to exit this window...
+pause >nul
