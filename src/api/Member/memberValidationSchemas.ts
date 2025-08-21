@@ -196,4 +196,18 @@ export const getMemberSchema = {
 };
 logger.debug("getMemberSchema initialized");
 
+export const getCounterpartyCreditReportSchema = {
+  memberID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+  denomination: {
+    sanitizer: s.sanitizeDenomination,
+    validator: v.validateDenomination,
+    required: false,
+  },
+};
+logger.debug("getCounterpartyCreditReportSchema initialized");
+
 logger.debug("All member validation schemas initialized");

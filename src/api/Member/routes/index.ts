@@ -11,6 +11,7 @@ import otpStoreRoutes from "./otpStoreRoutes";
 import editMemberRoute from "./editMemberRoute";
 import sellInMarketRoute from "./sellInMarketRoute";
 import getMemberRoute from "./getMemberRoute";
+import getCounterpartyCreditReportRoute from "./getCounterpartyCreditReportRoute";
 import logger from "../../../utils/logger";
 
 /**
@@ -35,12 +36,13 @@ export default function MemberRoutes() {
   router.use(editMemberRoute());
   router.use(sellInMarketRoute());
   router.use(getMemberRoute());
+  router.use(getCounterpartyCreditReportRoute());
   router.use("/verify", verificationRoutes()); // Mount verification routes with prefix
   router.use("/verify", otpStoreRoutes()); // Mount OTP store routes with same prefix
 
   logger.info("Member routes initialized successfully", {
     module: "memberRoutes",
-    routesCount: 12,
+    routesCount: 13,
   });
 
   return router;
