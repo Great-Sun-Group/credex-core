@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Counterparty Credit Report Query</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-due-diligence"></div>
+
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <h1 class="chapter-title">Counterparty Credit Report Query</h1>
+
+    <h2>Overview</h2>
+    <p>
+      The counterparty credit report system provides comprehensive credit assessment capabilities within the credex ecosystem. It enables members to evaluate the creditworthiness of potential counterparties by analyzing their historical performance with unsecured credexes across all owned accounts.
+    </p>
+
+    <h2>What the Credit Report Currently Does</h2>
+
+    <h3>Core Functionality</h3>
+    <ul>
+      <li>
+        <strong>Credit Rating Calculation:</strong> Analyzes unsecured credex performance across four key categories:
+        <ul>
+          <li><em>Redeemed Total:</em> Successfully fulfilled credit obligations</li>
+          <li><em>Outstanding Total:</em> Current active credit obligations</li>
+          <li><em>Defaulted Total:</em> Credit obligations that have failed</li>
+          <li><em>Written-Off Total:</em> Credit obligations deemed uncollectable</li>
+        </ul>
+      </li>
+      <li>
+        <strong>Member Profile Information:</strong> Complete member details including name, handle, member tier, and profile pictures in multiple resolutions
+      </li>
+      <li>
+        <strong>Account Portfolio:</strong> Comprehensive listing of all accounts owned by the member with account-specific details and thumbnails
+      </li>
+      <li>
+        <strong>Multi-Denomination Support:</strong> Credit ratings can be displayed in any supported denomination (USD, CAD, XAU, etc.) with real-time conversion from the base CXX currency
+      </li>
+    </ul>
+
+    <h3>Technical Architecture</h3>
+    <p>The system is built on three core services:</p>
+    <ul>
+      <li><strong>CounterpartyCreditReportService:</strong> Main orchestrator that coordinates data gathering and report generation</li>
+      <li><strong>CreditRatingService:</strong> Specialized service for calculating credit metrics using Neo4j graph queries</li>
+      <li><strong>AssetUrlService:</strong> Handles batch retrieval of profile pictures and account thumbnails</li>
+    </ul>
+
+    <h2>Cypher Query Analysis: Unsecured Credit History</h2>
+
+    <h3>The Core Credit Rating Query</h3>
+    <p>The system uses a sophisticated Neo4j Cypher query to calculate credit ratings:</p>
+
+    <pre><code>MATCH (member:Member {memberID: $memberID})
+
+// Find all accounts owned by the member
+MATCH (member)-[:OWNS]->(account:Account)
+
+// Find all unsecured credexes issued by the member's accounts
+OPTIONAL MATCH (account)-[:OWES|CLEARED]->(credex:Credex)
+WHERE NOT (credex)<-[:SECURES]-() // Ensure it's unsecured
+
+// Calculate totals in CXX
+WITH 
+  member, 
+  COLLECT(credex) AS credexes
+
+// Calculate totals, handling null values
+RETURN {
+  redeemedTotalCXX: REDUCE(total = 0, c IN credexes | 
+    CASE WHEN c IS NOT NULL THEN total + c.RedeemedAmount ELSE total END
+  ),
+  outstandingTotalCXX: REDUCE(total = 0, c IN credexes | 
+    CASE WHEN c IS NOT NULL THEN total + c.OutstandingAmount ELSE total END
+  ),
+  defaultedTotalCXX: REDUCE(total = 0, c IN credexes | 
+    CASE WHEN c IS NOT NULL THEN total + c.DefaultedAmount ELSE total END
+  ),
+  writtenOffTotalCXX: REDUCE(total = 0, c IN credexes | 
+    CASE WHEN c IS NOT NULL THEN total + c.WrittenOffAmount ELSE total END
+  )
+} AS creditRating</code></pre>
+
+    <h3>Query Components Breakdown</h3>
+
+    <h4>1. Member and Account Traversal</h4>
+    <ul>
+      <li><strong>Member Identification:</strong> <code>(member:Member {memberID: $memberID})</code> - Locates the specific member</li>
+      <li><strong>Account Ownership:</strong> <code>(member)-[:OWNS]->(account:Account)</code> - Finds all accounts owned by the member</li>
+      <li><strong>Scope:</strong> Credit rating encompasses ALL accounts owned by a member, providing a comprehensive view</li>
+    </ul>
+
+    <h4>2. Credex Relationship Analysis</h4>
+    <ul>
+      <li><strong>Relationship Types:</strong>
+        <ul>
+          <li><code>:OWES</code> - Active debt relationships (credex is currently outstanding)</li>
+          <li><code>:CLEARED</code> - Historical debt relationships (credex has been resolved)</li>
+        </ul>
+      </li>
+      <li><strong>Temporal Coverage:</strong> Captures both current obligations and historical performance</li>
+      <li><strong>Potential Issue:</strong> The query uses both relationship types, which could lead to double-counting if a credex transitions from OWES to CLEARED but both relationships persist</li>
+    </ul>
+
+    <h4>3. Unsecured Filter</h4>
+    <ul>
+      <li><strong>Critical Filter:</strong> <code>WHERE NOT (credex)<-[:SECURES]-()</code></li>
+      <li><strong>Purpose:</strong> Excludes secured credexes (those backed by collateral)</li>
+      <li><strong>Focus:</strong> Credit rating based purely on unsecured credit performance, which better reflects creditworthiness</li>
+    </ul>
+
+    <h4>4. The Four Credit Categories</h4>
+
+    <h5>RedeemedAmount</h5>
+    <ul>
+      <li><strong>Definition:</strong> Value successfully paid back to creditors</li>
+      <li><strong>Credit Impact:</strong> Positive indicator - demonstrates ability to fulfill obligations</li>
+      <li><strong>Business Meaning:</strong> Shows reliability and trustworthiness in credit relationships</li>
+    </ul>
+
+    <h5>OutstandingAmount</h5>
+    <ul>
+      <li><strong>Definition:</strong> Value currently owed but not yet paid</li>
+      <li><strong>Credit Impact:</strong> Current liability - indicates present financial exposure</li>
+      <li><strong>Business Meaning:</strong> Key metric for assessing current risk when extending new credit</li>
+    </ul>
+
+    <h5>DefaultedAmount</h5>
+    <ul>
+      <li><strong>Definition:</strong> Value that has been declared in default</li>
+      <li><strong>Credit Impact:</strong> Strong negative indicator - shows failed credit obligations</li>
+      <li><strong>Business Meaning:</strong> Critical red flag for future credit decisions</li>
+    </ul>
+
+    <h5>WrittenOffAmount</h5>
+    <ul>
+      <li><strong>Definition:</strong> Value written off as uncollectable</li>
+      <li><strong>Credit Impact:</strong> Strongest negative indicator - represents total loss</li>
+      <li><strong>Business Meaning:</strong> Indicates severe credit problems and potential insolvency</li>
+    </ul>
+
+    <h4>5. Data Aggregation and Safety</h4>
+    <ul>
+      <li><strong>Collection Strategy:</strong> <code>COLLECT(credex) AS credexes</code> - Gathers all relevant credexes</li>
+      <li><strong>Null Handling:</strong> <code>CASE WHEN c IS NOT NULL</code> - Prevents errors from null values</li>
+      <li><strong>Reduction Function:</strong> <code>REDUCE()</code> - Efficiently sums amounts across all credexes</li>
+      <li><strong>Data Integrity:</strong> Ensures accurate calculations even with missing or incomplete data</li>
+    </ul>
+
+    <h2>Query Performance and Optimization</h2>
+
+    <h3>Current Performance Characteristics</h3>
+    <ul>
+      <li><strong>Graph Traversal:</strong> Efficient for relationship-heavy queries in Neo4j</li>
+      <li><strong>Single Query Approach:</strong> Minimizes database round trips</li>
+      <li><strong>Aggregation Efficiency:</strong> Uses native Cypher reduction functions</li>
+    </ul>
+
+    <h3>Potential Optimization Areas</h3>
+    <ul>
+      <li><strong>Indexing Strategy:</strong> Ensure proper indexes on memberID, account relationships, and credex properties</li>
+      <li><strong>Query Caching:</strong> Cache credit ratings for frequently accessed members</li>
+      <li><strong>Incremental Updates:</strong> Consider maintaining running totals updated by transaction events</li>
+      <li><strong>Relationship Lifecycle:</strong> Clarify OWES vs CLEARED relationship management to prevent double-counting</li>
+    </ul>
+
+    <h2>Business Logic and Risk Assessment</h2>
+
+    <h3>Credit Score Interpretation</h3>
+    <p>The four categories provide a comprehensive credit profile:</p>
+    <ul>
+      <li><strong>Positive Indicators:</strong>
+        <ul>
+          <li>High redeemed amounts relative to total credit activity</li>
+          <li>Low or zero defaulted and written-off amounts</li>
+          <li>Reasonable outstanding amounts relative to historical performance</li>
+        </ul>
+      </li>
+      <li><strong>Warning Signs:</strong>
+        <ul>
+          <li>High outstanding amounts without corresponding redeemed history</li>
+          <li>Any defaulted amounts, especially recent ones</li>
+          <li>Written-off amounts indicating severe credit problems</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>Risk Assessment Framework</h3>
+    <p>The system enables sophisticated risk assessment:</p>
+    <ul>
+      <li><strong>Historical Performance Ratio:</strong> Redeemed / (Redeemed + Defaulted + Written-Off)</li>
+      <li><strong>Current Exposure Ratio:</strong> Outstanding / Total Credit Activity</li>
+      <li><strong>Default Rate:</strong> (Defaulted + Written-Off) / Total Credit Activity</li>
+      <li><strong>Credit Velocity:</strong> Total activity relative to time as member</li>
+    </ul>
+
+    <h2>Security and Privacy Considerations</h2>
+
+    <h3>Data Access Controls</h3>
+    <ul>
+      <li><strong>Authentication Required:</strong> Only authenticated members can request credit reports</li>
+      <li><strong>Audit Logging:</strong> All credit report requests are logged with requesting member ID</li>
+      <li><strong>Rate Limiting:</strong> Prevents abuse of credit report system</li>
+    </ul>
+
+    <h3>Privacy Protection</h3>
+    <ul>
+      <li><strong>Aggregated Data Only:</strong> Individual transaction details are not exposed</li>
+      <li><strong>Summary Metrics:</strong> Only totals and ratios are provided, not specific credex information</li>
+      <li><strong>Member Consent:</strong> Credit reports are part of the transparent credex ecosystem model</li>
+    </ul>
+
+    <h2>Future Enhancements</h2>
+
+    <h3>Advanced Analytics</h3>
+    <ul>
+      <li><strong>Trend Analysis:</strong> Track credit performance over time</li>
+      <li><strong>Peer Comparison:</strong> Compare member performance to similar members</li>
+      <li><strong>Predictive Modeling:</strong> Use historical data to predict future credit risk</li>
+    </ul>
+
+    <h3>Integration Opportunities</h3>
+    <ul>
+      <li><strong>Real-Time Updates:</strong> Update credit ratings as transactions occur</li>
+      <li><strong>Smart Contract Integration:</strong> Automatically adjust credit terms based on performance</li>
+      <li><strong>External Data Sources:</strong> Incorporate additional credit information where available</li>
+    </ul>
+
+    <h2>Conclusion</h2>
+    <p>
+      The counterparty credit report system represents a sophisticated approach to credit assessment within the credex ecosystem. By analyzing unsecured credex performance across four key categories, it provides comprehensive insights into member creditworthiness while maintaining privacy and security.
+    </p>
+
+    <p>
+      The underlying Cypher query efficiently traverses the graph database to aggregate credit performance data, though some areas for optimization and clarification exist. As the ecosystem grows, this foundation provides the basis for increasingly sophisticated credit analysis and risk management capabilities.
+    </p>
+
+    <!-- Footer Component -->
+    <div id="footer-due-diligence"></div>
+
+    <!-- Template System JavaScript -->
+    <script src="../js/template.js"></script>
+    <script src="../js/dropdown.js"></script>
+  </body>
+</html>

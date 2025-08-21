@@ -9,29 +9,29 @@ credentials-file: C:\Users\RyanLuke\.cloudflared\8ef6eec4-04dd-4d58-bd90-f8c3d18
 ingress:
   # Vimbiso ChatServer routes
   - hostname: vimbisopay.africa
-    service: http://0.0.0.0:9000
+    service: http://127.0.0.1:9000
     originRequest:
       httpHostHeader: vimbisopay.africa
   - hostname: www.vimbisopay.africa
-    service: http://0.0.0.0:9000
+    service: http://127.0.0.1:9000
     originRequest:
       httpHostHeader: vimbisopay.africa
   - hostname: api.vimbisopay.africa
-    service: http://0.0.0.0:9000
+    service: http://127.0.0.1:9000
     originRequest:
       httpHostHeader: vimbisopay.africa
   
   # New domain: vimbisopay.co.zw
   - hostname: vimbisopay.co.zw
-    service: http://0.0.0.0:9000
+    service: http://127.0.0.1:9000
     originRequest:
       httpHostHeader: vimbisopay.co.zw
   - hostname: www.vimbisopay.co.zw
-    service: http://0.0.0.0:9000
+    service: http://127.0.0.1:9000
     originRequest:
       httpHostHeader: vimbisopay.co.zw
   - hostname: api.vimbisopay.co.zw
-    service: http://0.0.0.0:9000
+    service: http://127.0.0.1:9000
     originRequest:
       httpHostHeader: vimbisopay.co.zw
   
