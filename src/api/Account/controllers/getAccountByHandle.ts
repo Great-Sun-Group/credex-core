@@ -120,6 +120,9 @@ export const GetAccountByHandleController = async (
             accountID: result.data!.accountID,
             accountName: result.data!.accountName,
             accountHandle: result.data!.accountHandle,
+            memberID: result.data!.memberID,
+            memberName: result.data!.memberName,
+            memberHandle: result.data!.memberHandle,
             creditRating: result.data!.creditRating
           }
         },
