@@ -6,6 +6,9 @@ interface AccountDetails {
   accountID: string;
   accountName: string;
   accountHandle: string;
+  memberID?: string;
+  memberName?: string;
+  memberHandle?: string;
   creditRating?: {
     redeemedTotalUSD: number;
     outstandingTotalUSD: number;
@@ -57,10 +60,15 @@ export async function GetAccountByHandleService(
     const result = await ledgerSpaceSession.run(
       `
       MATCH (account:Account { accountHandle: $accountHandle })
+      MATCH (member:Member)-[:OWNS]->(account)
       RETURN
         account.accountID AS accountID,
         account.accountName AS accountName,
-        account.accountHandle AS accountHandle
+        account.accountHandle AS accountHandle,
+        member.memberID AS memberID,
+        member.firstname AS firstname,
+        member.lastname AS lastname,
+        member.memberHandle AS memberHandle
       `,
       { accountHandle }
     );
@@ -79,14 +87,21 @@ export async function GetAccountByHandleService(
 
     const record = result.records[0];
     const accountID = record.get("accountID");
+    const firstname = record.get("firstname");
+    const lastname = record.get("lastname");
+    
     const accountDetails: AccountDetails = {
       accountID,
       accountName: record.get("accountName"),
-      accountHandle: record.get("accountHandle")
+      accountHandle: record.get("accountHandle"),
+      memberID: record.get("memberID"),
+      memberName: firstname && lastname ? `${firstname} ${lastname}` : undefined,
+      memberHandle: record.get("memberHandle")
     };
 
-    logger.info("Account retrieved from database", { 
+    logger.info("Account and member retrieved from database", { 
       accountID: accountDetails.accountID, 
+      memberID: accountDetails.memberID,
       accountHandle 
     });
 
