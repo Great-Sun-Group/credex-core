@@ -174,6 +174,9 @@ export interface AccountActionDetails {
   accountID: string;
   accountName?: string;
   accountHandle?: string;
+  memberID?: string;
+  memberName?: string;
+  memberHandle?: string;
   defaultDenom?: string;
   ownerID?: string;
   memberIdAuthorized?: string;
