@@ -114,6 +114,7 @@ export interface CredexActionDetails {
   dueDate?: string | null; // Added for unsecured Credex creation
   receiverAccountID?: string;
   receiverAccountName?: string;
+  currentUserAccountName?: string; // Added for getCredex response
   acceptorAccountID?: string;
   reason?: string;
   limit?: string;

@@ -67,6 +67,11 @@ export interface AdminCredexDetails {
   initialAmount: string;
   status: string;
   secured: boolean;
+  transactionType?: string;
+  amount?: string;
+  receiverAccountName?: string;
+  currentUserAccountName?: string;
+  securedCredex?: boolean;
   outstandingAmount?: string;
   defaultedAmount?: string;
   redeemedAmount?: string;
@@ -149,6 +154,21 @@ export interface AdminCredexDashboard {
       accountType: string;
       ownerID: string;
       signerID: string;
+      member?: {
+        memberID: string;
+        firstname: string;
+        lastname: string;
+        memberHandle?: string;
+        memberTier: number;
+        creditRating?: {
+          redeemedTotal: number;
+          outstandingTotal: number;
+          defaultedTotal: number;
+          writtenOffTotal: number;
+          denomination: string;
+        };
+        profilePictureUrl?: string;
+      } | null;
     };
     acceptor: {
       accountID: string;
@@ -157,6 +177,21 @@ export interface AdminCredexDashboard {
       accountType: string;
       ownerID: string;
       signerID: string;
+      member?: {
+        memberID: string;
+        firstname: string;
+        lastname: string;
+        memberHandle?: string;
+        memberTier: number;
+        creditRating?: {
+          redeemedTotal: number;
+          outstandingTotal: number;
+          defaultedTotal: number;
+          writtenOffTotal: number;
+          denomination: string;
+        };
+        profilePictureUrl?: string;
+      } | null;
     };
     securer: {
       accountID: string;

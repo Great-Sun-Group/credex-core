@@ -8,6 +8,7 @@ interface CredexData {
   transactionType: string;
   debit: boolean;
   counterpartyAccountName: string;
+  currentUserAccountName: string;
   securerID?: string;
   securerName?: string;
   Denomination: string;
@@ -26,6 +27,20 @@ interface CredexData {
   formattedDefaultedAmount: string;
   formattedWrittenOffAmount: string;
   securedCredex: boolean;
+  // Member data for issuer
+  issuerMemberID?: string;
+  issuerFirstName?: string;
+  issuerLastName?: string;
+  issuerHandle?: string;
+  issuerTier?: number;
+  issuerProfilePicture?: string;
+  // Member data for acceptor
+  acceptorMemberID?: string;
+  acceptorFirstName?: string;
+  acceptorLastName?: string;
+  acceptorHandle?: string;
+  acceptorTier?: number;
+  acceptorProfilePicture?: string;
 }
 
 interface ClearedAgainstData {
@@ -55,6 +70,7 @@ interface DatabaseCredexResult {
     transactionType: string;
     debit: boolean;
     counterpartyAccountName: string;
+    currentUserAccountName: string;
     securerID?: string;
     securerName?: string;
     Denomination: string;
@@ -68,6 +84,20 @@ interface DatabaseCredexResult {
     cancelledAt?: string;
     dueDate?: string;
     securedCredex: boolean;
+    // Member data for issuer
+    issuerMemberID?: string;
+    issuerFirstName?: string;
+    issuerLastName?: string;
+    issuerHandle?: string;
+    issuerTier?: number;
+    issuerProfilePicture?: string;
+    // Member data for acceptor
+    acceptorMemberID?: string;
+    acceptorFirstName?: string;
+    acceptorLastName?: string;
+    acceptorHandle?: string;
+    acceptorTier?: number;
+    acceptorProfilePicture?: string;
   };
   error?: string;
 }
@@ -115,11 +145,14 @@ export async function GetCredexService(
         MATCH
         (account:Account {accountID: $accountID})-[transactionType:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-(credex:Credex {credexID: $credexID})-[:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-(counterparty:Account)
         OPTIONAL MATCH (credex)<-[:SECURES]-(securer:Account)
+        OPTIONAL MATCH (account)<-[:OWNS]-(currentUserMember:Member)
+        OPTIONAL MATCH (counterparty)<-[:OWNS]-(counterpartyMember:Member)
         RETURN
           credex.credexID AS credexID,
           type(transactionType) AS transactionType,
           (startNode(transactionType) = account) AS debit,
           counterparty.accountName AS counterpartyAccountName,
+          account.accountName AS currentUserAccountName,
           securer.accountID AS securerID,
           securer.accountName AS securerName,
           credex.Denomination AS Denomination,
@@ -132,7 +165,21 @@ export async function GetCredexService(
           credex.declinedAt AS declinedAt,
           credex.cancelledAt AS cancelledAt,
           credex.dueDate AS dueDate,
-          credex.securedCredex AS securedCredex
+          credex.securedCredex AS securedCredex,
+          // Current user member data
+          currentUserMember.memberID AS currentUserMemberID,
+          currentUserMember.firstname AS currentUserFirstName,
+          currentUserMember.lastname AS currentUserLastName,
+          currentUserMember.memberHandle AS currentUserHandle,
+          currentUserMember.memberTier AS currentUserTier,
+          currentUserMember.profilePictureUrl AS currentUserProfilePicture,
+          // Counterparty member data
+          counterpartyMember.memberID AS counterpartyMemberID,
+          counterpartyMember.firstname AS counterpartyFirstName,
+          counterpartyMember.lastname AS counterpartyLastName,
+          counterpartyMember.memberHandle AS counterpartyHandle,
+          counterpartyMember.memberTier AS counterpartyTier,
+          counterpartyMember.profilePictureUrl AS counterpartyProfilePicture
       `;
 
       const queryResult = await tx.run(query, { credexID, accountID });
@@ -145,13 +192,16 @@ export async function GetCredexService(
       }
 
       const record = queryResult.records[0];
+      const debit = record.get("debit");
+
       return {
         success: true,
         data: {
           credexID: record.get("credexID"),
           transactionType: record.get("transactionType"),
-          debit: record.get("debit"),
+          debit: debit,
           counterpartyAccountName: record.get("counterpartyAccountName"),
+          currentUserAccountName: record.get("currentUserAccountName"),
           securerID: record.get("securerID"),
           securerName: record.get("securerName"),
           Denomination: record.get("Denomination"),
@@ -164,7 +214,20 @@ export async function GetCredexService(
           declinedAt: record.get("declinedAt"),
           cancelledAt: record.get("cancelledAt"),
           dueDate: record.get("dueDate"),
-          securedCredex: record.get("securedCredex")
+          securedCredex: record.get("securedCredex"),
+          // Assign member data based on transaction direction
+          issuerMemberID: debit ? record.get("currentUserMemberID") : record.get("counterpartyMemberID"),
+          issuerFirstName: debit ? record.get("currentUserFirstName") : record.get("counterpartyFirstName"),
+          issuerLastName: debit ? record.get("currentUserLastName") : record.get("counterpartyLastName"),
+          issuerHandle: debit ? record.get("currentUserHandle") : record.get("counterpartyHandle"),
+          issuerTier: debit ? record.get("currentUserTier") : record.get("counterpartyTier"),
+          issuerProfilePicture: debit ? record.get("currentUserProfilePicture") : record.get("counterpartyProfilePicture"),
+          acceptorMemberID: debit ? record.get("counterpartyMemberID") : record.get("currentUserMemberID"),
+          acceptorFirstName: debit ? record.get("counterpartyFirstName") : record.get("currentUserFirstName"),
+          acceptorLastName: debit ? record.get("counterpartyLastName") : record.get("currentUserLastName"),
+          acceptorHandle: debit ? record.get("counterpartyHandle") : record.get("currentUserHandle"),
+          acceptorTier: debit ? record.get("counterpartyTier") : record.get("currentUserTier"),
+          acceptorProfilePicture: debit ? record.get("counterpartyProfilePicture") : record.get("currentUserProfilePicture")
         }
       };
     });
@@ -242,6 +305,7 @@ export async function GetCredexService(
           transactionType: credexData.transactionType,
           debit: credexData.debit,
           counterpartyAccountName: credexData.counterpartyAccountName,
+          currentUserAccountName: credexData.currentUserAccountName,
           securerID: credexData.securerID,
           securerName: credexData.securerName,
           Denomination,
@@ -260,6 +324,19 @@ export async function GetCredexService(
           formattedDefaultedAmount: `${denomFormatter(amounts.DefaultedAmount, Denomination)} ${Denomination}`,
           formattedWrittenOffAmount: `${denomFormatter(amounts.WrittenOffAmount, Denomination)} ${Denomination}`,
           securedCredex: credexData.securedCredex,
+          // Include member data
+          issuerMemberID: credexData.issuerMemberID,
+          issuerFirstName: credexData.issuerFirstName,
+          issuerLastName: credexData.issuerLastName,
+          issuerHandle: credexData.issuerHandle,
+          issuerTier: credexData.issuerTier,
+          issuerProfilePicture: credexData.issuerProfilePicture,
+          acceptorMemberID: credexData.acceptorMemberID,
+          acceptorFirstName: credexData.acceptorFirstName,
+          acceptorLastName: credexData.acceptorLastName,
+          acceptorHandle: credexData.acceptorHandle,
+          acceptorTier: credexData.acceptorTier,
+          acceptorProfilePicture: credexData.acceptorProfilePicture,
         },
         clearedAgainstData
       },
