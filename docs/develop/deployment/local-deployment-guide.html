@@ -29,6 +29,184 @@
       The local CI/CD pipeline automatically deploys services to the local production environment using GitHub Actions workflows that call deployment APIs running on the local server.
     </p>
 
+    <h2>Server Restart Procedure</h2>
+
+    <p>
+      This comprehensive procedure covers all steps needed to restart and verify the complete deployment system after a server shutdown or reset.
+    </p>
+
+    <h3>Prerequisites Verification</h3>
+
+    <h4>1. Check Docker Desktop Status</h4>
+    <p><strong>Why important:</strong> Docker Desktop must be running before starting any Docker containers. If Docker Desktop is not running, you'll see connection errors even after running docker-compose commands.</p>
+    <pre><code># Check if Docker Desktop process is running
+Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue
+
+# Check Docker CLI connection
+docker --version
+
+# If no output or connection errors, start Docker Desktop
+# Method 1: Start from Windows Start Menu
+# Method 2: Run from PowerShell (try these paths in order):
+Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+Start-Process "C:\Program Files\Docker\Docker Desktop\Docker Desktop.exe"
+Start-Process "C:\Program Files\Docker\Desktop\Docker Desktop.exe"
+
+# Wait 1-2 minutes for Docker to fully initialize</code></pre>
+
+    <h4>2. Verify Cloudflared Installation</h4>
+    <p><strong>Why important:</strong> Cloudflare tunnels are required for external access but are started separately from Docker services.</p>
+    <pre><code># Check if cloudflared is available
+.\cloudflared.exe version
+
+# Verify tunnel configurations exist
+ls cloudflared-config.yml, cloudflared-config-vimbiso.yml</code></pre>
+
+    <h3>Start Production Services</h3>
+
+    <h4>3. Start Docker Production Environment</h4>
+    <pre><code># Navigate to project directory
+cd C:\Great-Sun-Group\credex-core
+
+# Start all production services
+docker compose -f docker-compose.prod.yml up -d
+
+# Verify services are starting (this may take several minutes)
+docker compose -f docker-compose.prod.yml ps</code></pre>
+
+    <h4>4. Verify Service Health</h4>
+    <p>Troubleshoot these errors if services fail to start:</p>
+    <pre><code># Common errors and solutions:
+# Error: unable to get image '...'
+# Solution: Docker Desktop not running - start it first (see Prerequisites)
+
+# Error: Access denied or file not found
+# Solution: Run PowerShell as Administrator or check permissions
+
+# Warning messages are typically safe:
+# - AWS_S3_BACKUP_BUCKET variable not set (expected)
+# - BACKUP_WEBHOOK_URL variable not set (expected)
+# - Version obsolete warning (informational)</code></pre>
+
+    <h4>5. Health Check Verification</h4>
+    <pre><code># Core API Health
+curl http://localhost:4000/api-docs
+
+# Expected: HTML content for Swagger UI (200 OK)
+
+# ChatServer Health
+curl http://localhost:9000/health/
+
+# Expected: 200 OK with health status</code></pre>
+
+    <h3>Start Cloudflare Tunnels</h3>
+
+    <h4>6. Check Current Tunnel Status</h4>
+    <pre><code># Use the provided status checker
+.\check-tunnel-status.bat
+
+# Expected: Services should show status 530 (tunnel not running)
+# If showing 200 OK, tunnels are already active</code></pre>
+
+    <h4>7. Start Tunnels for External Access</h4>
+    <p><strong>Important:</strong> Tunnel processes run in terminal windows and stop when those windows are closed. Do not close the tunnel windows.</p>
+    <pre><code># Start tunnels using provided batch file
+.\start-tunnel.bat
+
+# This opens two new terminal windows:
+# - Credex tunnel (mycredex.app)
+# - Vimbiso tunnel (vimbisopay.africa, vimbisopay.co.zw)
+
+# Keep these windows open for persistent access
+# Minimize but DO NOT CLOSE them</code></pre>
+
+    <h4>8. Verify External Availability</h4>
+    <pre><code># Re-run status check
+.\check-tunnel-status.bat
+
+# Expected results:
+# mycredex.app: 301 (redirecting) or 200
+# vimbisopay.africa: 200
+# vimbisopay.co.zw: Status depends on endpoint but should not be 530
+
+# Test API access through tunnels
+curl https://mycredex.app/api-docs</code></pre>
+
+    <h3>System State Verification</h3>
+
+    <h4>9. Complete System Check</h4>
+    <pre><code># All containers running and healthy
+docker compose -f docker-compose.prod.yml ps
+
+# Expected: 11 containers running, 0 failed
+
+# Service health summary:
+# ✓ credex-core-prod
+# ✓ vimbiso-chatserver-prod
+# ✓ credex-deploy-daemon
+# ✓ vimbiso-redis-state-prod
+# ✓ credex-neo4j-ledger
+# ✓ credex-neo4j-search
+# ✓ credex-system-monitor
+# ✓ credex-backup-service</code></pre>
+
+    <h4>10. Deployment System Ready</h4>
+    <p>Once all steps above are confirmed, the system is ready for:</p>
+    <ul>
+      <li>GitHub Actions automatic deployments</li>
+      <li>Manual deployment API calls</li>
+      <li>Mobile app deployment and APK downloads</li>
+    </ul>
+
+    <h3>What to Watch For</h3>
+    <p>Common post-restart issues:</p>
+    <ul>
+      <li><strong>API returns 503/504 errors after restart</strong>: Wait 2-3 minutes for health checks to pass</li>
+      <li><strong>External domains return 530 after tunnel restart</strong>: DNS propagation may take 5-10 minutes</li>
+      <li><strong>Container shows Waiting status for several minutes</strong>: Normal, wait for health checks</li>
+    </ul>
+
+    <h3>Troubleshooting Failures</h3>
+
+    <h4>If Services Won't Start</h4>
+    <pre><code># Force restart with cleanup
+docker compose -f docker-compose.prod.yml down --remove-orphans
+docker compose -f docker-compose.prod.yml up -d
+
+# Check logs for specific errors
+docker logs credex-core-prod --tail 20
+docker logs vimbiso-chatserver-prod --tail 20</code></pre>
+
+    <h4>If Tunnels Won't Start</h4>
+    <pre><code># Kill any existing cloudflared processes
+taskkill /F /IM cloudflared.exe
+
+# Verify config files are valid
+.\cloudflared.exe tunnel --config cloudflared-config.yml info
+.\cloudflared.exe tunnel --config cloudflared-config-vimbiso.yml info
+
+# Start tunnels manually if batch file fails:
+start .\cloudflared.exe tunnel --config cloudflared-config.yml run
+start .\cloudflared.exe tunnel --config cloudflared-config-vimbiso.yml run</code></pre>
+
+    <h4>If External Access Still Unavailable</h4>
+    <ul>
+      <li>Verify DNS configuration in Cloudflare dashboard</li>
+      <li>Check firewall settings for ports 80/443</li>
+      <li>Restart all services in order: Docker → Tunnels → Verification</li>
+    </ul>
+
+    <h3>Quick Reference</h3>
+
+    <p><strong>Complete Restart (after Docker Desktop is running):</strong></p>
+    <pre><code>cd C:\Great-Sun-Group\credex-core
+docker compose -f docker-compose.prod.yml up -d
+timeout /t 30 /nobreak
+docker compose -f docker-compose.prod.yml ps
+curl http://localhost:4000/api-docs
+.\start-tunnel.bat
+.</code></pre>
+
     <h2>Architecture</h2>
 
     <h3>Three Repository Structure</h3>
@@ -216,6 +394,77 @@
     </ul>
 
     <h2>Troubleshooting</h2>
+
+    <h3>System Startup Issues</h3>
+
+    <h4>Docker Desktop Not Running</h4>
+    <ul>
+      <li><strong>Cause</strong>: Docker Desktop must be started before any Docker commands can execute</li>
+      <li><strong>Error Messages</strong>: "unable to get image '...' error during connect" or "open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified"</li>
+      <li><strong>Solution</strong>:
+        <pre><code># Check Docker Desktop process
+Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue
+
+# Start Docker Desktop (try these paths in order):
+Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+Start-Process "C:\Program Files\Docker\Docker Desktop\Docker Desktop.exe"
+Start-Process "C:\Program Files\Docker\Desktop\Docker Desktop.exe"
+
+# Wait 1-2 minutes for Docker to fully initialize
+timeout /t 120 /nobreak</code></pre>
+      </li>
+      <li><strong>Prevention</strong>: Always start Docker Desktop as part of your system startup procedure</li>
+    </ul>
+
+    <h4>Cloudflare Tunnels Stop When Windows Close</h4>
+    <ul>
+      <li><strong>Cause</strong>: Tunnel processes run in interactive terminal windows that persist only while open</li>
+      <li><strong>Symptoms</strong>: External domains return "This site can't be reached" (Status 530)</li>
+      <li><strong>Solution</strong>:
+        <pre><code># Restart tunnels
+.\start-tunnel.bat
+
+# IMPORTANT: Keep the tunnel windows open!
+# Minimize them but do NOT close</code></pre>
+      </li>
+      <li><strong>Prevention</strong>: Create persistent tunnel service (requires Windows Administrator privileges):
+        <pre><code># Attempt service installation (run as Admin)
+Start-Process powershell -ArgumentList "& .\cloudflared.exe service install" -Verb RunAs -Wait
+
+# Alternative: Keep tunnel terminals running indefinitely</code></pre>
+      </li>
+    </ul>
+
+    <h4>Access Denied Installing Cloudflared Service</h4>
+    <ul>
+      <li><strong>Cause</strong>: Attempting to install Windows service without administrator privileges</li>
+      <li><strong>Error</strong>: "Cannot establish a connection to the service control manager: Access is denied"</li>
+      <li><strong>Solution</strong>:
+        <ul>
+          <li>Run PowerShell as Administrator</li>
+          <li>Use interactive tunnel mode (keep windows open)</li>
+          <li>Add tunnel startup to system startup scripts</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h4>Container Startup Failures After Restart</h4>
+    <ul>
+      <li><strong>Cause</strong>: Services may take 4-5 minutes to fully initialize with health checks</li>
+      <li><strong>Symptoms</strong>: Container shows "Waiting" status for extended periods</li>
+      <li><strong>Solution</strong>: Wait for health checks to complete. All containers should show "Healthy" status within 4-5 minutes</li>
+    </ul>
+
+    <h4>API Returns 503/504 After Restart</h4>
+    <ul>
+      <li><strong>Cause</strong>: Services still initializing, health checks not yet passed</li>
+      <li><strong>Solution</strong>:
+        <pre><code># Wait and retry health checks
+timeout /t 30 /nobreak
+curl http://localhost:4000/api-docs</code></pre>
+      </li>
+      <li><strong>Expected Timing</strong>: Full system readiness takes 2-5 minutes post-Docker start</li>
+    </ul>
 
     <h3>Deployment System Issues</h3>
 
