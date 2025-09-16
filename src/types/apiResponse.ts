@@ -107,19 +107,45 @@ export enum ApiActionType {
  * Common details structures for different action types
  */
 
+export interface CredexCreditRating {
+  redeemedTotal: number;
+  outstandingTotal: number;
+  defaultedTotal: number;
+  writtenOffTotal: number;
+  denomination: string;
+}
+
 export interface CredexActionDetails {
   amount: string;
   denomination: string;
   securedCredex: boolean;
   dueDate?: string | null; // Added for unsecured Credex creation
-  receiverAccountID?: string;
-  receiverAccountName?: string;
-  currentUserAccountName?: string; // Added for getCredex response
+  receiverAccountID?: string; // Legacy field - for backward compatibility during migration
+  receiverAccountName?: string; // Legacy field - for backward compatibility during migration
   acceptorAccountID?: string;
+  acceptorAccountName?: string;
+  issuerAccountID?: string;
+  issuerAccountName?: string;
   reason?: string;
   limit?: string;
-  transactionType?: string; // Added for getCredex response
-  invoiceID?: string; // Added for invoice-related Credex
+  transactionType?: string;
+  invoiceID?: string;
+  // Member data fields for enhanced Credex details
+  issuerMemberID?: string;
+  issuerFirstName?: string;
+  issuerLastName?: string;
+  issuerHandle?: string;
+  issuerTier?: number;
+  issuerProfilePicture?: string;
+  acceptorMemberID?: string;
+  acceptorFirstName?: string;
+  acceptorLastName?: string;
+  acceptorHandle?: string;
+  acceptorTier?: number;
+  acceptorProfilePicture?: string;
+  // Credit ratings (only for unsecured credexes)
+  issuerCreditRating?: CredexCreditRating;
+  acceptorCreditRating?: CredexCreditRating;
   // Additional fields for Credex retrieval
   status?: {
     outstandingAmount: string;

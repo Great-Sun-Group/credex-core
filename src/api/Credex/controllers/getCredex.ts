@@ -1,11 +1,6 @@
 import express from "express";
 import { GetCredexService } from "../services/GetCredex";
 import logger from "../../../utils/logger";
-import { getDashboardData } from "../../../utils/dashboardUtils";
-import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
-import { MemberRepository, IMemberRepository } from "../../Member/repositories/MemberRepository";
-import { SpendLimitService, ISpendLimitService } from "../../Member/services/SpendLimitService";
-import { CounterpartyCreditReportService } from "../../Member/services/CounterpartyCreditReportService";
 import { UserRequest } from "../../../middleware/authMiddleware";
 import {
   ApiActionType,
@@ -13,12 +8,6 @@ import {
   CredexActionDetails,
   ErrorActionDetails
 } from "../../../types/apiResponse";
-
-// Initialize services
-const memberDashboardService = new MemberDashboardService(
-  new MemberRepository(),
-  new SpendLimitService()
-);
 
 type GetCredexResponse = TypedApiResponse<CredexActionDetails>;
 type GetCredexErrorResponse = TypedApiResponse<ErrorActionDetails>;
@@ -42,24 +31,23 @@ export async function GetCredexController(
   logger.debug("Entering GetCredexController", { requestId });
 
   try {
-    const { credexID, accountID } = req.body;
+    const { credexID } = req.body;
 
     // Basic validation is handled by validateRequest middleware
     logger.info("Fetching Credex details", {
       credexID,
-      accountID,
       requestId
     });
 
     const responseData = await GetCredexService(
       credexID,
-      accountID
+      req.user.memberID
     );
 
     if (!responseData || !responseData.success || !responseData.data) {
       logger.warn("Credex not found or not accessible", {
         credexID,
-        accountID,
+        memberID: req.user.memberID,
         requestId,
         error: responseData?.message
       });
@@ -71,109 +59,20 @@ export async function GetCredexController(
             id: credexID,
             type: ApiActionType.ERROR_NOT_FOUND,
             timestamp: new Date().toISOString(),
-            actor: accountID,
+            actor: req.user.memberID,
             details: {
               code: responseData?.error?.code || "NOT_FOUND",
               reason: responseData?.error?.details || "Credex not found or not accessible",
               field: "credexID"
             }
           },
-          dashboard: {}
+          dashboard: {} // Empty dashboard for error responses
         }
       };
       return res.status(404).json(errorResponse);
     }
 
     const { credexData, clearedAgainstData } = responseData.data;
-
-    // Get dashboard data
-    const dashboardData = await getDashboardData(req.user.memberID, accountID, requestId, memberDashboardService);
-
-    // Fetch counterparty credit ratings
-    const creditReportService = CounterpartyCreditReportService.getInstance();
-    let issuerMemberDetails = null;
-    let acceptorMemberDetails = null;
-
-    if (credexData.issuerMemberID) {
-      try {
-        const issuerReport = await creditReportService.generateCounterpartyCreditReport(
-          credexData.issuerMemberID,
-          credexData.Denomination || 'USD'
-        );
-        issuerMemberDetails = {
-          memberID: issuerReport.memberID,
-          firstname: issuerReport.memberName.split(' ')[0] || '',
-          lastname: issuerReport.memberName.split(' ').slice(1).join(' ') || '',
-          memberHandle: issuerReport.memberHandle,
-          memberTier: credexData.issuerTier || 1,
-          creditRating: {
-            redeemedTotalUSD: issuerReport.creditRating.redeemedTotal,
-            outstandingTotalUSD: issuerReport.creditRating.outstandingTotal,
-            defaultedTotalUSD: issuerReport.creditRating.defaultedTotal,
-            writtenOffTotalUSD: issuerReport.creditRating.writtenOffTotal
-          },
-          profilePictureUrl: issuerReport.profilePictureUrls?.thumbnail || credexData.issuerProfilePicture
-        };
-      } catch (error) {
-        logger.warn('Failed to fetch issuer credit report', { memberID: credexData.issuerMemberID, error });
-        // Fallback to basic member info
-        issuerMemberDetails = {
-          memberID: credexData.issuerMemberID,
-          firstname: credexData.issuerFirstName,
-          lastname: credexData.issuerLastName,
-          memberHandle: credexData.issuerHandle,
-          memberTier: credexData.issuerTier,
-          profilePictureUrl: credexData.issuerProfilePicture
-        };
-      }
-    }
-
-    if (credexData.acceptorMemberID) {
-      try {
-        const acceptorReport = await creditReportService.generateCounterpartyCreditReport(
-          credexData.acceptorMemberID,
-          credexData.Denomination || 'USD'
-        );
-        acceptorMemberDetails = {
-          memberID: acceptorReport.memberID,
-          firstname: acceptorReport.memberName.split(' ')[0] || '',
-          lastname: acceptorReport.memberName.split(' ').slice(1).join(' ') || '',
-          memberHandle: acceptorReport.memberHandle,
-          memberTier: credexData.acceptorTier || 1,
-          creditRating: {
-            redeemedTotalUSD: acceptorReport.creditRating.redeemedTotal,
-            outstandingTotalUSD: acceptorReport.creditRating.outstandingTotal,
-            defaultedTotalUSD: acceptorReport.creditRating.defaultedTotal,
-            writtenOffTotalUSD: acceptorReport.creditRating.writtenOffTotal
-          },
-          profilePictureUrl: acceptorReport.profilePictureUrls?.thumbnail || credexData.acceptorProfilePicture
-        };
-      } catch (error) {
-        logger.warn('Failed to fetch acceptor credit report', { memberID: credexData.acceptorMemberID, error });
-        // Fallback to basic member info
-        acceptorMemberDetails = {
-          memberID: credexData.acceptorMemberID,
-          firstname: credexData.acceptorFirstName,
-          lastname: credexData.acceptorLastName,
-          memberHandle: credexData.acceptorHandle,
-          memberTier: credexData.acceptorTier,
-          profilePictureUrl: credexData.acceptorProfilePicture
-        };
-      }
-    }
-
-    // Add relationships section to dashboard
-    const enhancedDashboard = {
-      ...dashboardData,
-      relationships: {
-        issuer: {
-          member: issuerMemberDetails
-        },
-        acceptor: {
-          member: acceptorMemberDetails
-        }
-      }
-    };
 
     const successResponse: GetCredexResponse = {
       message: "Credex details retrieved successfully",
@@ -182,13 +81,31 @@ export async function GetCredexController(
           id: credexID,
           type: ApiActionType.CREDEX_RETRIEVED,
           timestamp: new Date().toISOString(),
-          actor: accountID,
+          actor: req.user.memberID,
           details: {
             amount: credexData.formattedInitialAmount.split(' ')[0],
             denomination: credexData.Denomination,
             securedCredex: credexData.securedCredex,
-            receiverAccountName: credexData.counterpartyAccountName,
-            currentUserAccountName: credexData.currentUserAccountName,
+            issuerAccountID: credexData.issuerAccountID,
+            issuerAccountName: credexData.issuerAccountName,
+            acceptorAccountID: credexData.acceptorAccountID,
+            acceptorAccountName: credexData.acceptorAccountName,
+            // Include member data fetched by service
+            issuerMemberID: credexData.issuerMemberID,
+            issuerFirstName: credexData.issuerFirstName,
+            issuerLastName: credexData.issuerLastName,
+            issuerHandle: credexData.issuerHandle,
+            issuerTier: credexData.issuerTier,
+            issuerProfilePicture: credexData.issuerProfilePicture,
+            acceptorMemberID: credexData.acceptorMemberID,
+            acceptorFirstName: credexData.acceptorFirstName,
+            acceptorLastName: credexData.acceptorLastName,
+            acceptorHandle: credexData.acceptorHandle,
+            acceptorTier: credexData.acceptorTier,
+            acceptorProfilePicture: credexData.acceptorProfilePicture,
+            // Include credit ratings (only for unsecured credexes)
+            issuerCreditRating: credexData.issuerCreditRating,
+            acceptorCreditRating: credexData.acceptorCreditRating,
             transactionType: credexData.transactionType,
             status: {
               outstandingAmount: credexData.formattedOutstandingAmount,
@@ -208,13 +125,13 @@ export async function GetCredexController(
             }))
           }
         },
-        dashboard: enhancedDashboard
+        dashboard: {} // No dashboard data for simplicity
       }
     };
 
     logger.info("Credex details retrieved successfully", {
       credexID,
-      accountID,
+      memberID: req.user.memberID,
       requestId
     });
 
@@ -234,7 +151,7 @@ export async function GetCredexController(
               id: req.body.credexID,
               type: ApiActionType.ERROR_UNAUTHORIZED,
               timestamp: new Date().toISOString(),
-              actor: req.body.accountID,
+              actor: req.user.memberID,
               details: {
                 code: "UNAUTHORIZED",
                 reason: "Not authorized to access this Credex"
@@ -258,7 +175,7 @@ export async function GetCredexController(
               id: req.body.credexID,
               type: ApiActionType.ERROR_NOT_FOUND,
               timestamp: new Date().toISOString(),
-              actor: req.body.accountID,
+              actor: req.user.memberID,
               details: {
                 code: "NOT_FOUND",
                 reason: "The specified Credex could not be found",

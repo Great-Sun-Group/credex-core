@@ -2,13 +2,23 @@ import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { denomFormatter } from "../../../utils/denomUtils";
 import moment from "moment-timezone";
 import logger from "../../../utils/logger";
+import { CreditRatingService } from "../../Member/services/CreditRatingService";
+
+interface CredexCreditRating {
+  redeemedTotal: number;
+  outstandingTotal: number;
+  defaultedTotal: number;
+  writtenOffTotal: number;
+  denomination: string;
+}
 
 interface CredexData {
   credexID: string;
   transactionType: string;
-  debit: boolean;
-  counterpartyAccountName: string;
-  currentUserAccountName: string;
+  issuerAccountID: string;
+  issuerAccountName: string;
+  acceptorAccountID: string;
+  acceptorAccountName: string;
   securerID?: string;
   securerName?: string;
   Denomination: string;
@@ -41,6 +51,9 @@ interface CredexData {
   acceptorHandle?: string;
   acceptorTier?: number;
   acceptorProfilePicture?: string;
+  // Credit ratings (only for unsecured credexes)
+  issuerCreditRating?: CredexCreditRating;
+  acceptorCreditRating?: CredexCreditRating;
 }
 
 interface ClearedAgainstData {
@@ -68,9 +81,10 @@ interface DatabaseCredexResult {
   data?: {
     credexID: string;
     transactionType: string;
-    debit: boolean;
-    counterpartyAccountName: string;
-    currentUserAccountName: string;
+    issuerAccountID: string;
+    issuerAccountName: string;
+    acceptorAccountID: string;
+    acceptorAccountName: string;
     securerID?: string;
     securerName?: string;
     Denomination: string;
@@ -104,30 +118,29 @@ interface DatabaseCredexResult {
 
 /**
  * GetCredexService
- * 
+ *
  * Retrieves detailed information about a Credex, including its current state,
  * amounts, and clearing information. Formats amounts and dates for display.
- * 
+ * Response is state-agnostic - issuer/acceptor roles are consistent regardless of viewer.
+ *
  * @param credexID - The ID of the Credex to retrieve
- * @param accountID - The ID of the account requesting the information
  * @returns GetCredexResult containing detailed Credex information
  */
 export async function GetCredexService(
   credexID: string,
-  accountID: string
+  memberID: string
 ): Promise<GetCredexResult> {
   logger.debug("Entering GetCredexService", {
-    credexID,
-    accountID
+    credexID
   });
 
-  if (!credexID || !accountID) {
+  if (!credexID) {
     return {
       success: false,
       message: "Missing required parameters",
       error: {
         code: "MISSING_PARAMS",
-        details: "credexID and accountID are required"
+        details: "credexID is required"
       }
     };
   }
@@ -136,23 +149,25 @@ export async function GetCredexService(
 
   try {
     logger.debug("Fetching Credex data from database", {
-      credexID,
-      accountID
+      credexID
     });
 
     const result: DatabaseCredexResult = await ledgerSpaceSession.executeRead(async (tx) => {
       const query = `
-        MATCH
-        (account:Account {accountID: $accountID})-[transactionType:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-(credex:Credex {credexID: $credexID})-[:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-(counterparty:Account)
+        MATCH (member:Member {memberID: $memberID})-[:OWNS]->(ownedAccount:Account)
+        WITH member, ownedAccount
+        MATCH (issuer:Account)-[transactionType:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-(credex:Credex {credexID: $credexID})-[transactionType2:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-(acceptor:Account)
+        WHERE ownedAccount = issuer OR ownedAccount = acceptor
         OPTIONAL MATCH (credex)<-[:SECURES]-(securer:Account)
-        OPTIONAL MATCH (account)<-[:OWNS]-(currentUserMember:Member)
-        OPTIONAL MATCH (counterparty)<-[:OWNS]-(counterpartyMember:Member)
+        OPTIONAL MATCH (issuer)<-[:OWNS]-(issuerMember:Member)
+        OPTIONAL MATCH (acceptor)<-[:OWNS]-(acceptorMember:Member)
         RETURN
           credex.credexID AS credexID,
           type(transactionType) AS transactionType,
-          (startNode(transactionType) = account) AS debit,
-          counterparty.accountName AS counterpartyAccountName,
-          account.accountName AS currentUserAccountName,
+          issuer.accountID AS issuerAccountID,
+          issuer.accountName AS issuerAccountName,
+          acceptor.accountID AS acceptorAccountID,
+          acceptor.accountName AS acceptorAccountName,
           securer.accountID AS securerID,
           securer.accountName AS securerName,
           credex.Denomination AS Denomination,
@@ -166,23 +181,23 @@ export async function GetCredexService(
           credex.cancelledAt AS cancelledAt,
           credex.dueDate AS dueDate,
           credex.securedCredex AS securedCredex,
-          // Current user member data
-          currentUserMember.memberID AS currentUserMemberID,
-          currentUserMember.firstname AS currentUserFirstName,
-          currentUserMember.lastname AS currentUserLastName,
-          currentUserMember.memberHandle AS currentUserHandle,
-          currentUserMember.memberTier AS currentUserTier,
-          currentUserMember.profilePictureUrl AS currentUserProfilePicture,
-          // Counterparty member data
-          counterpartyMember.memberID AS counterpartyMemberID,
-          counterpartyMember.firstname AS counterpartyFirstName,
-          counterpartyMember.lastname AS counterpartyLastName,
-          counterpartyMember.memberHandle AS counterpartyHandle,
-          counterpartyMember.memberTier AS counterpartyTier,
-          counterpartyMember.profilePictureUrl AS counterpartyProfilePicture
+          // Issuer member data
+          issuerMember.memberID AS issuerMemberID,
+          issuerMember.firstname AS issuerFirstName,
+          issuerMember.lastname AS issuerLastName,
+          issuerMember.memberHandle AS issuerHandle,
+          issuerMember.memberTier AS issuerTier,
+          issuerMember.profilePictureUrl AS issuerProfilePicture,
+          // Acceptor member data
+          acceptorMember.memberID AS acceptorMemberID,
+          acceptorMember.firstname AS acceptorFirstName,
+          acceptorMember.lastname AS acceptorLastName,
+          acceptorMember.memberHandle AS acceptorHandle,
+          acceptorMember.memberTier AS acceptorTier,
+          acceptorMember.profilePictureUrl AS acceptorProfilePicture
       `;
 
-      const queryResult = await tx.run(query, { credexID, accountID });
+      const queryResult = await tx.run(query, { credexID, memberID });
 
       if (queryResult.records.length === 0) {
         return {
@@ -192,16 +207,16 @@ export async function GetCredexService(
       }
 
       const record = queryResult.records[0];
-      const debit = record.get("debit");
 
       return {
         success: true,
         data: {
           credexID: record.get("credexID"),
           transactionType: record.get("transactionType"),
-          debit: debit,
-          counterpartyAccountName: record.get("counterpartyAccountName"),
-          currentUserAccountName: record.get("currentUserAccountName"),
+          issuerAccountID: record.get("issuerAccountID"),
+          issuerAccountName: record.get("issuerAccountName"),
+          acceptorAccountID: record.get("acceptorAccountID"),
+          acceptorAccountName: record.get("acceptorAccountName"),
           securerID: record.get("securerID"),
           securerName: record.get("securerName"),
           Denomination: record.get("Denomination"),
@@ -215,19 +230,19 @@ export async function GetCredexService(
           cancelledAt: record.get("cancelledAt"),
           dueDate: record.get("dueDate"),
           securedCredex: record.get("securedCredex"),
-          // Assign member data based on transaction direction
-          issuerMemberID: debit ? record.get("currentUserMemberID") : record.get("counterpartyMemberID"),
-          issuerFirstName: debit ? record.get("currentUserFirstName") : record.get("counterpartyFirstName"),
-          issuerLastName: debit ? record.get("currentUserLastName") : record.get("counterpartyLastName"),
-          issuerHandle: debit ? record.get("currentUserHandle") : record.get("counterpartyHandle"),
-          issuerTier: debit ? record.get("currentUserTier") : record.get("counterpartyTier"),
-          issuerProfilePicture: debit ? record.get("currentUserProfilePicture") : record.get("counterpartyProfilePicture"),
-          acceptorMemberID: debit ? record.get("counterpartyMemberID") : record.get("currentUserMemberID"),
-          acceptorFirstName: debit ? record.get("counterpartyFirstName") : record.get("currentUserFirstName"),
-          acceptorLastName: debit ? record.get("counterpartyLastName") : record.get("currentUserLastName"),
-          acceptorHandle: debit ? record.get("counterpartyHandle") : record.get("currentUserHandle"),
-          acceptorTier: debit ? record.get("counterpartyTier") : record.get("currentUserTier"),
-          acceptorProfilePicture: debit ? record.get("counterpartyProfilePicture") : record.get("currentUserProfilePicture")
+          // Direct assignment of member data from state-agnostic query
+          issuerMemberID: record.get("issuerMemberID"),
+          issuerFirstName: record.get("issuerFirstName"),
+          issuerLastName: record.get("issuerLastName"),
+          issuerHandle: record.get("issuerHandle"),
+          issuerTier: record.get("issuerTier"),
+          issuerProfilePicture: record.get("issuerProfilePicture"),
+          acceptorMemberID: record.get("acceptorMemberID"),
+          acceptorFirstName: record.get("acceptorFirstName"),
+          acceptorLastName: record.get("acceptorLastName"),
+          acceptorHandle: record.get("acceptorHandle"),
+          acceptorTier: record.get("acceptorTier"),
+          acceptorProfilePicture: record.get("acceptorProfilePicture")
         }
       };
     });
@@ -244,16 +259,15 @@ export async function GetCredexService(
     }
 
     const credexData = result.data;
-    const debit = credexData.debit;
     const Denomination = credexData.Denomination;
 
-    // Format amounts based on debit/credit
+    // State-agnostic amount formatting (no debit/credit sign manipulation)
     const amounts = {
-      InitialAmount: debit ? -credexData.InitialAmount : credexData.InitialAmount,
-      OutstandingAmount: debit ? -credexData.OutstandingAmount : credexData.OutstandingAmount,
-      RedeemedAmount: debit ? -credexData.RedeemedAmount : credexData.RedeemedAmount,
-      DefaultedAmount: debit ? -credexData.DefaultedAmount : credexData.DefaultedAmount,
-      WrittenOffAmount: debit ? -credexData.WrittenOffAmount : credexData.WrittenOffAmount,
+      InitialAmount: credexData.InitialAmount,
+      OutstandingAmount: credexData.OutstandingAmount,
+      RedeemedAmount: credexData.RedeemedAmount,
+      DefaultedAmount: credexData.DefaultedAmount,
+      WrittenOffAmount: credexData.WrittenOffAmount,
     };
 
     // Format dates
@@ -261,40 +275,83 @@ export async function GetCredexService(
       moment(date).subtract(1, "month").format("YYYY-MM-DD") : 
       undefined;
 
-    // Get cleared against data
-    const clearedAgainstQuery = await ledgerSpaceSession.executeRead(async (tx) => {
-      const query = `
-        MATCH (credex:Credex {credexID: $credexID})-[credloopRel:CREDLOOP]-(clearedAgainstCredex:Credex)-[:OWES|CLEARED]-(account:Account {accountID: $accountID}), (clearedAgainstCredex)-[:OWES|CLEARED]-(clearedAgainstCounterparty:Account)
-        RETURN
-          clearedAgainstCredex.credexID AS clearedAgainstCredexID,
-          credloopRel.AmountRedeemed / credloopRel.CXXmultiplier AS clearedAmount,
-          clearedAgainstCredex.InitialAmount / clearedAgainstCredex.CXXmultiplier AS clearedAgainstCredexInitialAmount,
-          clearedAgainstCredex.Denomination AS clearedAgainstCredexDenomination,
-          clearedAgainstCounterparty.accountName AS clearedAgainstCounterpartyAccountName
-      `;
+    // Get cleared against data - context-aware filtering via member ownership
+    let clearedAgainstData: ClearedAgainstData[] = [];
 
-      return tx.run(query, { credexID, accountID });
-    });
+    if (memberID) {
+      const clearedAgainstQuery = await ledgerSpaceSession.executeRead(async (tx) => {
+        const query = `
+          MATCH (member:Member {memberID: $memberID})-[:OWNS]->(memberAccount:Account)
+          MATCH (credex:Credex {credexID: $credexID})-[credloopRel:CREDLOOP]-(clearedAgainstCredex:Credex)-[:OWES|CLEARED]-(memberAccount), (clearedAgainstCredex)-[:OWES|CLEARED]-(clearedAgainstCounterparty:Account)
+          RETURN
+            clearedAgainstCredex.credexID AS clearedAgainstCredexID,
+            credloopRel.AmountRedeemed / credloopRel.CXXmultiplier AS clearedAmount,
+            clearedAgainstCredex.InitialAmount / clearedAgainstCredex.CXXmultiplier AS clearedAgainstCredexInitialAmount,
+            clearedAgainstCredex.Denomination AS clearedAgainstCredexDenomination,
+            clearedAgainstCounterparty.accountName AS clearedAgainstCounterpartyAccountName
+        `;
 
-    const clearedAgainstData: ClearedAgainstData[] = clearedAgainstQuery.records.map(record => {
-      const clearedAmount = record.get("clearedAmount");
-      const clearedAgainstCredexInitialAmount = record.get("clearedAgainstCredexInitialAmount");
-      const clearedAgainstCredexDenomination = record.get("clearedAgainstCredexDenomination");
-      const signumClearedAgainstCredexInitialAmount = debit ? 
-        clearedAgainstCredexInitialAmount : 
-        -clearedAgainstCredexInitialAmount;
+        return tx.run(query, { credexID, memberID });
+      });
 
-      return {
-        clearedAgainstCredexID: record.get("clearedAgainstCredexID"),
-        formattedClearedAmount: `${denomFormatter(clearedAmount, clearedAgainstCredexDenomination)} ${clearedAgainstCredexDenomination}`,
-        formattedClearedAgainstCredexInitialAmount: `${denomFormatter(signumClearedAgainstCredexInitialAmount, clearedAgainstCredexDenomination)} ${clearedAgainstCredexDenomination}`,
-        clearedAgainstCounterpartyAccountName: record.get("clearedAgainstCounterpartyAccountName"),
-      };
-    });
+      clearedAgainstData = clearedAgainstQuery.records.map(record => {
+        const clearedAmount = record.get("clearedAmount");
+        const clearedAgainstCredexInitialAmount = record.get("clearedAgainstCredexInitialAmount");
+        const clearedAgainstCredexDenomination = record.get("clearedAgainstCredexDenomination");
+
+        return {
+          clearedAgainstCredexID: record.get("clearedAgainstCredexID"),
+          formattedClearedAmount: `${denomFormatter(clearedAmount, clearedAgainstCredexDenomination)} ${clearedAgainstCredexDenomination}`,
+          formattedClearedAgainstCredexInitialAmount: `${denomFormatter(clearedAgainstCredexInitialAmount, clearedAgainstCredexDenomination)} ${clearedAgainstCredexDenomination}`,
+          clearedAgainstCounterpartyAccountName: record.get("clearedAgainstCounterpartyAccountName"),
+        };
+      });
+    }
+
+    // Fetch credit ratings for unsecured credexes
+    let issuerCreditRating: CredexCreditRating | undefined;
+    let acceptorCreditRating: CredexCreditRating | undefined;
+
+    if (!credexData.securedCredex) {
+      logger.debug("Fetching credit ratings for unsecured credex", {
+        credexID,
+        issuerMemberID: credexData.issuerMemberID,
+        acceptorMemberID: credexData.acceptorMemberID
+      });
+
+      const creditRatingService = CreditRatingService.getInstance();
+
+      try {
+        // Fetch issuer credit rating if member ID exists
+        if (credexData.issuerMemberID) {
+          issuerCreditRating = await creditRatingService.getMemberCreditRatingInDenom(
+            credexData.issuerMemberID,
+            Denomination
+          );
+        }
+
+        // Fetch acceptor credit rating if member ID exists
+        if (credexData.acceptorMemberID) {
+          acceptorCreditRating = await creditRatingService.getMemberCreditRatingInDenom(
+            credexData.acceptorMemberID,
+            Denomination
+          );
+        }
+      } catch (error) {
+        logger.warn("Failed to fetch credit ratings", {
+          error: error instanceof Error ? error.message : "Unknown error",
+          credexID,
+          issuerMemberID: credexData.issuerMemberID,
+          acceptorMemberID: credexData.acceptorMemberID
+        });
+        // Continue without credit ratings - don't fail the whole request
+      }
+    }
 
     logger.info("Credex details retrieved successfully", {
       credexID,
-      accountID
+      hasIssuerCreditRating: issuerCreditRating !== undefined,
+      hasAcceptorCreditRating: acceptorCreditRating !== undefined
     });
 
     return {
@@ -303,9 +360,10 @@ export async function GetCredexService(
         credexData: {
           credexID: credexData.credexID,
           transactionType: credexData.transactionType,
-          debit: credexData.debit,
-          counterpartyAccountName: credexData.counterpartyAccountName,
-          currentUserAccountName: credexData.currentUserAccountName,
+          issuerAccountID: credexData.issuerAccountID,
+          issuerAccountName: credexData.issuerAccountName,
+          acceptorAccountID: credexData.acceptorAccountID,
+          acceptorAccountName: credexData.acceptorAccountName,
           securerID: credexData.securerID,
           securerName: credexData.securerName,
           Denomination,
@@ -337,6 +395,9 @@ export async function GetCredexService(
           acceptorHandle: credexData.acceptorHandle,
           acceptorTier: credexData.acceptorTier,
           acceptorProfilePicture: credexData.acceptorProfilePicture,
+          // Include credit ratings (only for unsecured credexes)
+          issuerCreditRating: issuerCreditRating,
+          acceptorCreditRating: acceptorCreditRating,
         },
         clearedAgainstData
       },
@@ -347,8 +408,7 @@ export async function GetCredexService(
     logger.error("Unexpected error in GetCredexService", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      credexID,
-      accountID
+      credexID
     });
 
     return {
@@ -363,8 +423,7 @@ export async function GetCredexService(
   } finally {
     await ledgerSpaceSession.close();
     logger.debug("Exiting GetCredexService", {
-      credexID,
-      accountID
+      credexID
     });
   }
 }

@@ -105,7 +105,7 @@ export const getCredexSchema = {
   accountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
-    required: true,
+    required: false, // Made optional for state-agnostic API, OWNS authorization via JWT
   }
 };
 logger.debug("getCredexSchema initialized");
