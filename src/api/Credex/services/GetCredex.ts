@@ -17,8 +17,10 @@ interface CredexData {
   transactionType: string;
   issuerAccountID: string;
   issuerAccountName: string;
+  issuerAccountHandle?: string;
   acceptorAccountID: string;
   acceptorAccountName: string;
+  acceptorAccountHandle?: string;
   securerID?: string;
   securerName?: string;
   Denomination: string;
@@ -83,8 +85,10 @@ interface DatabaseCredexResult {
     transactionType: string;
     issuerAccountID: string;
     issuerAccountName: string;
+    issuerAccountHandle?: string;
     acceptorAccountID: string;
     acceptorAccountName: string;
+    acceptorAccountHandle?: string;
     securerID?: string;
     securerName?: string;
     Denomination: string;
@@ -152,6 +156,9 @@ export async function GetCredexService(
       credexID
     });
 
+    // DEBUG: Log query parameters for debugging
+    logger.debug("GetCredex query parameters", { credexID, memberID });
+
     const result: DatabaseCredexResult = await ledgerSpaceSession.executeRead(async (tx) => {
       const query = `
         MATCH (member:Member {memberID: $memberID})-[:OWNS]->(ownedAccount:Account)
@@ -166,8 +173,10 @@ export async function GetCredexService(
           type(transactionType) AS transactionType,
           issuer.accountID AS issuerAccountID,
           issuer.accountName AS issuerAccountName,
+          issuer.accountHandle AS issuerAccountHandle,
           acceptor.accountID AS acceptorAccountID,
           acceptor.accountName AS acceptorAccountName,
+          acceptor.accountHandle AS acceptorAccountHandle,
           securer.accountID AS securerID,
           securer.accountName AS securerName,
           credex.Denomination AS Denomination,
@@ -215,8 +224,10 @@ export async function GetCredexService(
           transactionType: record.get("transactionType"),
           issuerAccountID: record.get("issuerAccountID"),
           issuerAccountName: record.get("issuerAccountName"),
+          issuerAccountHandle: record.get("issuerAccountHandle"),
           acceptorAccountID: record.get("acceptorAccountID"),
           acceptorAccountName: record.get("acceptorAccountName"),
+          acceptorAccountHandle: record.get("acceptorAccountHandle"),
           securerID: record.get("securerID"),
           securerName: record.get("securerName"),
           Denomination: record.get("Denomination"),
@@ -362,6 +373,7 @@ export async function GetCredexService(
           transactionType: credexData.transactionType,
           issuerAccountID: credexData.issuerAccountID,
           issuerAccountName: credexData.issuerAccountName,
+          issuerAccountHandle: credexData.issuerAccountHandle,
           acceptorAccountID: credexData.acceptorAccountID,
           acceptorAccountName: credexData.acceptorAccountName,
           securerID: credexData.securerID,

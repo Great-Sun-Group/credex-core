@@ -124,8 +124,10 @@ export interface CredexActionDetails {
   receiverAccountName?: string; // Legacy field - for backward compatibility during migration
   acceptorAccountID?: string;
   acceptorAccountName?: string;
+  acceptorAccountHandle?: string;
   issuerAccountID?: string;
   issuerAccountName?: string;
+  issuerAccountHandle?: string;
   reason?: string;
   limit?: string;
   transactionType?: string;

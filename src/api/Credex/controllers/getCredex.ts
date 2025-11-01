@@ -88,8 +88,10 @@ export async function GetCredexController(
             securedCredex: credexData.securedCredex,
             issuerAccountID: credexData.issuerAccountID,
             issuerAccountName: credexData.issuerAccountName,
+            issuerAccountHandle: credexData.issuerAccountHandle,
             acceptorAccountID: credexData.acceptorAccountID,
             acceptorAccountName: credexData.acceptorAccountName,
+            acceptorAccountHandle: credexData.acceptorAccountHandle,
             // Include member data fetched by service
             issuerMemberID: credexData.issuerMemberID,
             issuerFirstName: credexData.issuerFirstName,
