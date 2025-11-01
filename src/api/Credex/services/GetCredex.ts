@@ -20,7 +20,7 @@ interface CredexData {
   issuerAccountHandle?: string;
   acceptorAccountID: string;
   acceptorAccountName: string;
-  acceptorAccountHandle?: string;
+  acceptorAccountHandle?: string | null;
   securerID?: string;
   securerName?: string;
   Denomination: string;
@@ -88,7 +88,7 @@ interface DatabaseCredexResult {
     issuerAccountHandle?: string;
     acceptorAccountID: string;
     acceptorAccountName: string;
-    acceptorAccountHandle?: string;
+    acceptorAccountHandle?: string | null;
     securerID?: string;
     securerName?: string;
     Denomination: string;
@@ -163,7 +163,7 @@ export async function GetCredexService(
       const query = `
         MATCH (member:Member {memberID: $memberID})-[:OWNS]->(ownedAccount:Account)
         WITH member, ownedAccount
-        MATCH (issuer:Account)-[transactionType:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-(credex:Credex {credexID: $credexID})-[transactionType2:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-(acceptor:Account)
+        MATCH (acceptor:Account)<-[transactionType:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-(credex:Credex {credexID: $credexID})<-[transactionType2:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-(issuer:Account)
         WHERE ownedAccount = issuer OR ownedAccount = acceptor
         OPTIONAL MATCH (credex)<-[:SECURES]-(securer:Account)
         OPTIONAL MATCH (issuer)<-[:OWNS]-(issuerMember:Member)
@@ -217,6 +217,15 @@ export async function GetCredexService(
 
       const record = queryResult.records[0];
 
+      const issuerAccountHandle = record.get("issuerAccountHandle");
+      const acceptorAccountHandle = record.get("acceptorAccountHandle");
+
+      logger.debug("Account handles from database", {
+        credexID,
+        issuerAccountHandle,
+        acceptorAccountHandle
+      });
+
       return {
         success: true,
         data: {
@@ -224,10 +233,10 @@ export async function GetCredexService(
           transactionType: record.get("transactionType"),
           issuerAccountID: record.get("issuerAccountID"),
           issuerAccountName: record.get("issuerAccountName"),
-          issuerAccountHandle: record.get("issuerAccountHandle"),
+          issuerAccountHandle: issuerAccountHandle,
           acceptorAccountID: record.get("acceptorAccountID"),
           acceptorAccountName: record.get("acceptorAccountName"),
-          acceptorAccountHandle: record.get("acceptorAccountHandle"),
+          acceptorAccountHandle: acceptorAccountHandle ? String(acceptorAccountHandle) : null,
           securerID: record.get("securerID"),
           securerName: record.get("securerName"),
           Denomination: record.get("Denomination"),
@@ -376,6 +385,7 @@ export async function GetCredexService(
           issuerAccountHandle: credexData.issuerAccountHandle,
           acceptorAccountID: credexData.acceptorAccountID,
           acceptorAccountName: credexData.acceptorAccountName,
+          acceptorAccountHandle: credexData.acceptorAccountHandle,
           securerID: credexData.securerID,
           securerName: credexData.securerName,
           Denomination,

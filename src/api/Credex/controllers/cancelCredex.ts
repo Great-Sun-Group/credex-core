@@ -107,10 +107,18 @@ export async function CancelCredexController(
           timestamp: responseData.data.cancelledAt,
           actor: signerID,
           details: {
-            amount: "0", // Amount is zeroed on cancellation
+            initialAmount: "0", // Amount is zeroed on cancellation
             denomination: responseData.data.denomination, // Use denomination from response
             securedCredex: false, // Not relevant for cancelled Credex
-            receiverAccountID: responseData.data.receiverAccountID,
+            transactionType: "OFFERS", // Assuming this is for cancelled offers
+            issuer: {
+              accountID: responseData.data.issuerAccountID,
+              accountName: responseData.data.issuerAccountName,
+            },
+            acceptor: {
+              accountID: responseData.data.receiverAccountID,
+              accountName: responseData.data.receiverAccountID, // Use accountID as fallback since name not available
+            },
             reason: "Cancelled by issuer",
           },
         },

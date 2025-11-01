@@ -116,39 +116,13 @@ export interface CredexCreditRating {
 }
 
 export interface CredexActionDetails {
-  amount: string;
+  // Core credex data
+  initialAmount: string;
   denomination: string;
   securedCredex: boolean;
-  dueDate?: string | null; // Added for unsecured Credex creation
-  receiverAccountID?: string; // Legacy field - for backward compatibility during migration
-  receiverAccountName?: string; // Legacy field - for backward compatibility during migration
-  acceptorAccountID?: string;
-  acceptorAccountName?: string;
-  acceptorAccountHandle?: string;
-  issuerAccountID?: string;
-  issuerAccountName?: string;
-  issuerAccountHandle?: string;
-  reason?: string;
-  limit?: string;
-  transactionType?: string;
-  invoiceID?: string;
-  // Member data fields for enhanced Credex details
-  issuerMemberID?: string;
-  issuerFirstName?: string;
-  issuerLastName?: string;
-  issuerHandle?: string;
-  issuerTier?: number;
-  issuerProfilePicture?: string;
-  acceptorMemberID?: string;
-  acceptorFirstName?: string;
-  acceptorLastName?: string;
-  acceptorHandle?: string;
-  acceptorTier?: number;
-  acceptorProfilePicture?: string;
-  // Credit ratings (only for unsecured credexes)
-  issuerCreditRating?: CredexCreditRating;
-  acceptorCreditRating?: CredexCreditRating;
-  // Additional fields for Credex retrieval
+  transactionType: string;
+
+  // Credex status
   status?: {
     outstandingAmount: string;
     redeemedAmount: string;
@@ -159,12 +133,50 @@ export interface CredexActionDetails {
     cancelledAt?: string;
     dueDate?: string;
   };
+
+  // Issuer data (account + member info) - optional for backward compatibility
+  issuer?: {
+    accountID: string;
+    accountName: string;
+    accountHandle?: string;
+    memberID?: string;
+    firstName?: string;
+    lastName?: string;
+    handle?: string; // member handle (fallback)
+    tier?: number;
+    profilePicture?: string;
+    creditRating?: CredexCreditRating;
+  };
+
+  // Acceptor data (account + member info) - optional for backward compatibility
+  acceptor?: {
+    accountID: string;
+    accountName: string;
+    accountHandle?: string;
+    memberID?: string;
+    firstName?: string;
+    lastName?: string;
+    handle?: string; // member handle (fallback)
+    tier?: number;
+    profilePicture?: string;
+    creditRating?: CredexCreditRating;
+  };
+
+  // Related transactions
   clearedAgainst?: Array<{
     credexID: string;
     amount: string;
     initialAmount: string;
     counterpartyName: string;
   }>;
+
+  // Legacy fields for backward compatibility (can be removed later)
+  dueDate?: string | null;
+  receiverAccountID?: string;
+  receiverAccountName?: string;
+  reason?: string;
+  limit?: string;
+  invoiceID?: string;
 }
 
 export interface CredexBulkActionDetails {

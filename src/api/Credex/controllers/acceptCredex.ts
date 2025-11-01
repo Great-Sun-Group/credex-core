@@ -120,10 +120,18 @@ export async function AcceptCredexController(
           timestamp: acceptCredexResult.data.acceptedAt,
           actor: signerID,
           details: {
-            amount: acceptCredexResult.data.amount,
+            initialAmount: acceptCredexResult.data.amount,
             denomination: acceptCredexResult.data.denomination,
             securedCredex: acceptCredexResult.data.secured,
-            acceptorAccountID: acceptCredexResult.data.acceptorAccountID,
+            transactionType: "OFFERS", // Assuming this is for accepted offers
+            issuer: {
+              accountID: acceptCredexResult.data.issuerAccountID,
+              accountName: acceptCredexResult.data.issuerAccountName,
+            },
+            acceptor: {
+              accountID: acceptCredexResult.data.acceptorAccountID,
+              accountName: acceptCredexResult.data.acceptorAccountID, // Use accountID as fallback since name not available
+            },
           },
         },
         dashboard,

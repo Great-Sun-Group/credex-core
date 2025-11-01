@@ -436,13 +436,18 @@ export async function CreateCredexController(
           timestamp: new Date().toISOString(),
           actor: signerID,
           details: {
-            amount: createCredexResult.data.formattedInitialAmount,
+            initialAmount: createCredexResult.data.formattedInitialAmount,
             denomination: createCredexResult.data.secured ? "USD" : Denomination, // Fallback to USD for secured Credex if Denomination is undefined
             securedCredex,
-            dueDate: createCredexResult.data.dueDate,
-            acceptorAccountID: createCredexResult.data.receiverAccountID,
-            acceptorAccountName:
-              createCredexResult.data.counterpartyAccountName,
+            transactionType: createCredexResult.data.transactionType,
+            issuer: {
+              accountID: issuerAccountID,
+              accountName: createCredexResult.data.issuerAccountName,
+            },
+            acceptor: {
+              accountID: createCredexResult.data.receiverAccountID,
+              accountName: createCredexResult.data.counterpartyAccountName,
+            },
             invoiceID: invoiceID || undefined,
           },
         },

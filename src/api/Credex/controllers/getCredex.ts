@@ -74,6 +74,13 @@ export async function GetCredexController(
 
     const { credexData, clearedAgainstData } = responseData.data;
 
+    logger.debug("Credex data in controller", {
+      credexID,
+      issuerAccountHandle: credexData.issuerAccountHandle,
+      acceptorAccountHandle: credexData.acceptorAccountHandle,
+      fullCredexData: credexData
+    });
+
     const successResponse: GetCredexResponse = {
       message: "Credex details retrieved successfully",
       data: {
@@ -83,32 +90,13 @@ export async function GetCredexController(
           timestamp: new Date().toISOString(),
           actor: req.user.memberID,
           details: {
-            amount: credexData.formattedInitialAmount.split(' ')[0],
+            // Core credex data
+            initialAmount: credexData.formattedInitialAmount.split(' ')[0],
             denomination: credexData.Denomination,
             securedCredex: credexData.securedCredex,
-            issuerAccountID: credexData.issuerAccountID,
-            issuerAccountName: credexData.issuerAccountName,
-            issuerAccountHandle: credexData.issuerAccountHandle,
-            acceptorAccountID: credexData.acceptorAccountID,
-            acceptorAccountName: credexData.acceptorAccountName,
-            acceptorAccountHandle: credexData.acceptorAccountHandle,
-            // Include member data fetched by service
-            issuerMemberID: credexData.issuerMemberID,
-            issuerFirstName: credexData.issuerFirstName,
-            issuerLastName: credexData.issuerLastName,
-            issuerHandle: credexData.issuerHandle,
-            issuerTier: credexData.issuerTier,
-            issuerProfilePicture: credexData.issuerProfilePicture,
-            acceptorMemberID: credexData.acceptorMemberID,
-            acceptorFirstName: credexData.acceptorFirstName,
-            acceptorLastName: credexData.acceptorLastName,
-            acceptorHandle: credexData.acceptorHandle,
-            acceptorTier: credexData.acceptorTier,
-            acceptorProfilePicture: credexData.acceptorProfilePicture,
-            // Include credit ratings (only for unsecured credexes)
-            issuerCreditRating: credexData.issuerCreditRating,
-            acceptorCreditRating: credexData.acceptorCreditRating,
             transactionType: credexData.transactionType,
+
+            // Credex status
             status: {
               outstandingAmount: credexData.formattedOutstandingAmount,
               redeemedAmount: credexData.formattedRedeemedAmount,
@@ -119,6 +107,36 @@ export async function GetCredexController(
               cancelledAt: credexData.cancelledAt,
               dueDate: credexData.dueDate
             },
+
+            // Issuer data
+            issuer: {
+              accountID: credexData.issuerAccountID,
+              accountName: credexData.issuerAccountName,
+              accountHandle: credexData.issuerAccountHandle,
+              memberID: credexData.issuerMemberID,
+              firstName: credexData.issuerFirstName,
+              lastName: credexData.issuerLastName,
+              handle: credexData.issuerHandle,
+              tier: credexData.issuerTier,
+              profilePicture: credexData.issuerProfilePicture,
+              creditRating: credexData.issuerCreditRating
+            },
+
+            // Acceptor data
+            acceptor: {
+              accountID: credexData.acceptorAccountID,
+              accountName: credexData.acceptorAccountName,
+              accountHandle: credexData.acceptorAccountHandle || undefined,
+              memberID: credexData.acceptorMemberID,
+              firstName: credexData.acceptorFirstName,
+              lastName: credexData.acceptorLastName,
+              handle: credexData.acceptorHandle,
+              tier: credexData.acceptorTier,
+              profilePicture: credexData.acceptorProfilePicture,
+              creditRating: credexData.acceptorCreditRating
+            },
+
+            // Related transactions
             clearedAgainst: clearedAgainstData.map(item => ({
               credexID: item.clearedAgainstCredexID,
               amount: item.formattedClearedAmount,

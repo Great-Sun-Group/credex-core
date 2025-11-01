@@ -109,10 +109,18 @@ export async function DeclineCredexController(
           timestamp: responseData.data.declinedAt,
           actor: signerID,
           details: {
-            amount: "0", // Amount is zeroed on decline
+            initialAmount: "0", // Amount is zeroed on decline
             denomination: responseData.data.denomination, // Use denomination from response
             securedCredex: false, // Not relevant for declined Credex
-            receiverAccountID: responseData.data.receiverAccountID,
+            transactionType: "OFFERS", // Assuming this is for declined offers
+            issuer: {
+              accountID: responseData.data.issuerAccountID,
+              accountName: responseData.data.issuerAccountName,
+            },
+            acceptor: {
+              accountID: responseData.data.receiverAccountID,
+              accountName: responseData.data.receiverAccountName,
+            },
             reason: "Declined by receiver",
           },
         },
