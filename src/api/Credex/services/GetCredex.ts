@@ -301,9 +301,8 @@ export async function GetCredexService(
     if (memberID) {
       const clearedWithQuery = await ledgerSpaceSession.executeRead(async (tx) => {
         const query = `
-          MATCH (member:Member {memberID: $memberID})-[:OWNS]->(ownedAccount:Account)-[:OWES|CLEARED]-(credex:Credex {credexID: $credexID})-[credloopRel:CREDLOOP]-(clearedWithCredex:Credex)-[:OWES|CLEARED]-(ownedAccount),
+          MATCH (member:Member {memberID: $memberID})-[:OWNS]->(ownedAccount:Account)-[:OWES|CLEARED]-(credex:Credex {credexID: $credexID})<-[credloopRel:CREDLOOP]-(clearedWithCredex:Credex)-[:OWES|CLEARED]-(ownedAccount),
           (clearedWithCredex)-[:OWES|CLEARED]-(clearedWithCounterparty:Account)
-          WHERE clearedWithCounterparty <> ownedAccount
           RETURN DISTINCT
             clearedWithCredex.credexID AS clearedWithCredexID,
             credloopRel.AmountRedeemed / credloopRel.CXXmultiplier AS clearedAmount,
