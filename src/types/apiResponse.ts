@@ -163,7 +163,7 @@ export interface CredexActionDetails {
   };
 
   // Related transactions
-  clearedAgainst?: Array<{
+  clearedWith?: Array<{
     credexID: string;
     amount: string;
     initialAmount: string;

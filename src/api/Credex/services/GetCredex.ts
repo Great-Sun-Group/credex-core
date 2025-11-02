@@ -58,18 +58,18 @@ interface CredexData {
   acceptorCreditRating?: CredexCreditRating;
 }
 
-interface ClearedAgainstData {
-  clearedAgainstCredexID: string;
+interface ClearedWithData {
+  clearedWithCredexID: string;
   formattedClearedAmount: string;
-  formattedClearedAgainstCredexInitialAmount: string;
-  clearedAgainstCounterpartyAccountName: string;
+  formattedClearedWithCredexInitialAmount: string;
+  clearedWithCounterpartyAccountName: string;
 }
 
 interface GetCredexResult {
   success: boolean;
   data?: {
     credexData: CredexData;
-    clearedAgainstData: ClearedAgainstData[];
+    clearedWithData: ClearedWithData[];
   };
   message: string;
   error?: {
@@ -295,35 +295,36 @@ export async function GetCredexService(
       moment(date).subtract(1, "month").format("YYYY-MM-DD") : 
       undefined;
 
-    // Get cleared against data - context-aware filtering via member ownership
-    let clearedAgainstData: ClearedAgainstData[] = [];
+    // Get cleared with data for this credex
+    let clearedWithData: ClearedWithData[] = [];
 
     if (memberID) {
-      const clearedAgainstQuery = await ledgerSpaceSession.executeRead(async (tx) => {
+      const clearedWithQuery = await ledgerSpaceSession.executeRead(async (tx) => {
         const query = `
-          MATCH (member:Member {memberID: $memberID})-[:OWNS]->(memberAccount:Account)
-          MATCH (credex:Credex {credexID: $credexID})-[credloopRel:CREDLOOP]-(clearedAgainstCredex:Credex)-[:OWES|CLEARED]-(memberAccount), (clearedAgainstCredex)-[:OWES|CLEARED]-(clearedAgainstCounterparty:Account)
-          RETURN
-            clearedAgainstCredex.credexID AS clearedAgainstCredexID,
+          MATCH (member:Member {memberID: $memberID})-[:OWNS]->(ownedAccount:Account)-[:OWES|CLEARED]-(credex:Credex {credexID: $credexID})-[credloopRel:CREDLOOP]-(clearedWithCredex:Credex)-[:OWES|CLEARED]-(ownedAccount),
+          (clearedWithCredex)-[:OWES|CLEARED]-(clearedWithCounterparty:Account)
+          WHERE clearedWithCounterparty <> ownedAccount
+          RETURN DISTINCT
+            clearedWithCredex.credexID AS clearedWithCredexID,
             credloopRel.AmountRedeemed / credloopRel.CXXmultiplier AS clearedAmount,
-            clearedAgainstCredex.InitialAmount / clearedAgainstCredex.CXXmultiplier AS clearedAgainstCredexInitialAmount,
-            clearedAgainstCredex.Denomination AS clearedAgainstCredexDenomination,
-            clearedAgainstCounterparty.accountName AS clearedAgainstCounterpartyAccountName
+            clearedWithCredex.InitialAmount / clearedWithCredex.CXXmultiplier AS clearedWithCredexInitialAmount,
+            clearedWithCredex.Denomination AS clearedWithCredexDenomination,
+            clearedWithCounterparty.accountName AS clearedWithCounterpartyAccountName
         `;
 
         return tx.run(query, { credexID, memberID });
       });
 
-      clearedAgainstData = clearedAgainstQuery.records.map(record => {
+      clearedWithData = clearedWithQuery.records.map(record => {
         const clearedAmount = record.get("clearedAmount");
-        const clearedAgainstCredexInitialAmount = record.get("clearedAgainstCredexInitialAmount");
-        const clearedAgainstCredexDenomination = record.get("clearedAgainstCredexDenomination");
+        const clearedWithCredexInitialAmount = record.get("clearedWithCredexInitialAmount");
+        const clearedWithCredexDenomination = record.get("clearedWithCredexDenomination");
 
         return {
-          clearedAgainstCredexID: record.get("clearedAgainstCredexID"),
-          formattedClearedAmount: `${denomFormatter(clearedAmount, clearedAgainstCredexDenomination)} ${clearedAgainstCredexDenomination}`,
-          formattedClearedAgainstCredexInitialAmount: `${denomFormatter(clearedAgainstCredexInitialAmount, clearedAgainstCredexDenomination)} ${clearedAgainstCredexDenomination}`,
-          clearedAgainstCounterpartyAccountName: record.get("clearedAgainstCounterpartyAccountName"),
+          clearedWithCredexID: record.get("clearedWithCredexID"),
+          formattedClearedAmount: `${denomFormatter(clearedAmount, clearedWithCredexDenomination)} ${clearedWithCredexDenomination}`,
+          formattedClearedWithCredexInitialAmount: `${denomFormatter(clearedWithCredexInitialAmount, clearedWithCredexDenomination)} ${clearedWithCredexDenomination}`,
+          clearedWithCounterpartyAccountName: record.get("clearedWithCounterpartyAccountName"),
         };
       });
     }
@@ -421,7 +422,7 @@ export async function GetCredexService(
           issuerCreditRating: issuerCreditRating,
           acceptorCreditRating: acceptorCreditRating,
         },
-        clearedAgainstData
+        clearedWithData
       },
       message: "Credex details retrieved successfully"
     };

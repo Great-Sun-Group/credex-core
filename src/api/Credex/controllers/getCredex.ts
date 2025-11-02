@@ -72,7 +72,7 @@ export async function GetCredexController(
       return res.status(404).json(errorResponse);
     }
 
-    const { credexData, clearedAgainstData } = responseData.data;
+    const { credexData, clearedWithData } = responseData.data;
 
     logger.debug("Credex data in controller", {
       credexID,
@@ -137,11 +137,11 @@ export async function GetCredexController(
             },
 
             // Related transactions
-            clearedAgainst: clearedAgainstData.map(item => ({
-              credexID: item.clearedAgainstCredexID,
+            clearedWith: clearedWithData.map(item => ({
+              credexID: item.clearedWithCredexID,
               amount: item.formattedClearedAmount,
-              initialAmount: item.formattedClearedAgainstCredexInitialAmount,
-              counterpartyName: item.clearedAgainstCounterpartyAccountName
+              initialAmount: item.formattedClearedWithCredexInitialAmount,
+              counterpartyName: item.clearedWithCounterpartyAccountName
             }))
           }
         },
