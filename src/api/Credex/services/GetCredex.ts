@@ -301,7 +301,8 @@ export async function GetCredexService(
     if (memberID) {
       const clearedWithQuery = await ledgerSpaceSession.executeRead(async (tx) => {
         const query = `
-          MATCH (member:Member {memberID: $memberID})-[:OWNS]->(ownedAccount:Account)-[:OWES|CLEARED]-(credex:Credex {credexID: $credexID})<-[credloopRel:CREDLOOP]-(clearedWithCredex:Credex)-[:OWES|CLEARED]-(ownedAccount),
+        // ThIS QUERY IS NOT QUITE RIGHT YET. IT RETURNS DUPLICATE RESULTS FOR CREDEXES BETWEEN ACCOUNTS OWNED BY THE SAME MEMBER.
+          MATCH (member:Member {memberID: $memberID})-[:OWNS]->(ownedAccount:Account)-[:OWES|CLEARED]-(credex:Credex {credexID: $credexID})-[credloopRel:CREDLOOP]-(clearedWithCredex:Credex)-[:OWES|CLEARED]-(ownedAccount),
           (clearedWithCredex)-[:OWES|CLEARED]-(clearedWithCounterparty:Account)
           RETURN DISTINCT
             clearedWithCredex.credexID AS clearedWithCredexID,
