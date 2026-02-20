@@ -164,6 +164,160 @@ abstract class MemberDataRepository {
 
 This foundation provides the extensible architecture needed for comprehensive member data storage while maintaining current application stability.
 
+
+## Login and Dashboard Flow in Member Data Streams
+
+### Current Login Flow Analysis
+
+**Server-Side:**
+1. **Phone Authentication**: Member logs in with phone number only
+2. **Token Generation**: JWT token created with member context
+3. **Dashboard Construction**:
+   - Fetches member data from Neo4j
+   - Gets account data for all member accounts
+   - Combines into standardized dashboard format
+   - Returns token + dashboard in single response
+
+**Client-Side:**
+1. **API Call**: POST to `/login` with phone number
+2. **Response Parsing**: Extracts token, member data, account data
+3. **Dashboard Storage**: Updates centralized DashboardService
+4. **User Persistence**: Saves user with token to local database
+
+### Stream-Enhanced Login Flow
+
+**Phase 1: Backward Compatible Login**
+Login remains the same but dashboard becomes stream-aware:
+
+```typescript
+// Server: Enhanced login response
+POST /login
+{
+  "phone": "+1234567890"
+}
+
+Response: {
+  "message": "Successfully logged in",
+  "data": {
+    "action": {
+      "id": "member-123",
+      "type": "MEMBER_LOGIN",
+      "details": {
+        "memberID": "member-123",
+        "token": "jwt-token-here",
+        "streams": {
+          "interactions": { "latestVersion": 42, "lastUpdated": "2025-11-04T17:52:00Z" },
+          "transactions": { "latestVersion": 15, "lastUpdated": "2025-11-04T17:45:00Z" }
+        }
+      }
+    },
+    "dashboard": { /* existing dashboard format */ }
+  }
+}
+```
+
+**Phase 2: Full Stream-Aware Login**
+Login response includes complete stream metadata and device registry:
+
+```typescript
+Response: {
+  "data": {
+    "action": {
+      "details": {
+        "memberID": "member-123",
+        "token": "jwt-token",
+        "deviceRegistry": [
+          { "deviceId": "mobile-abc", "type": "mobile", "streams": ["interactions", "transactions"] },
+          { "deviceId": "watch-xyz", "type": "wearable", "streams": ["biometrics"] }
+        ],
+        "streamStates": {
+          "interactions": {
+            "latestVersion": 42,
+            "deviceStates": {
+              "mobile-abc": { "version": 42, "lastUpdated": "2025-11-04T17:52:00Z" }
+            }
+          },
+          "transactions": {
+            "latestVersion": 15,
+            "deviceStates": {
+              "mobile-abc": { "version": 15, "lastUpdated": "2025-11-04T17:45:00Z" }
+            }
+          }
+        }
+      }
+    },
+    "dashboard": { /* existing format maintained */ }
+  }
+}
+```
+
+### Enhanced Client-Side Dashboard Handling
+
+**Stream-Aware DashboardService:**
+
+```dart
+class DashboardService {
+  Dashboard? _currentDashboard;
+  Map<String, StreamState> _streamStates = {};
+  List<DeviceRegistration> _deviceRegistry = [];
+
+  void updateFromLogin(LoginResponse response) {
+    // Update traditional dashboard
+    _currentDashboard = response.dashboard;
+
+    // Update stream metadata
+    _streamStates = response.streamStates;
+    _deviceRegistry = response.deviceRegistry;
+  }
+
+  // Check if specific stream data needs refresh
+  bool needsStreamUpdate(String streamId, int clientVersion) {
+    final serverVersion = _streamStates[streamId]?.latestVersion ?? 0;
+    return clientVersion < serverVersion;
+  }
+}
+```
+
+**Post-Login Stream Synchronization:**
+
+```dart
+class MemberDataBloc extends Bloc<MemberDataEvent, MemberDataState> {
+  Future<void> _handleLoginSuccess(LoginSuccess event, Emitter emit) async {
+    // Update dashboard service with stream metadata
+    dashboardService.updateFromLogin(event.loginResponse);
+
+    // Check which streams need initial sync
+    final streamsToSync = _identifyStreamsNeedingSync();
+
+    if (streamsToSync.isNotEmpty) {
+      add(FetchStreamsData(streams: streamsToSync));
+    }
+  }
+
+  List<String> _identifyStreamsNeedingSync() {
+    return ['interactions', 'transactions'].where((streamId) {
+      final clientVersion = localStorage.getStreamVersion(streamId);
+      return dashboardService.needsStreamUpdate(streamId, clientVersion);
+    }).toList();
+  }
+}
+```
+
+### Key Benefits
+
+1. **Efficient Syncing**: Only fetch changed data since last login
+2. **Device Awareness**: System knows all member devices and capabilities
+3. **Incremental Updates**: No need to send full dashboard on every login
+4. **Background Sync**: Streams can sync independently of login flow
+5. **Scalable**: Architecture supports hundreds of devices per member
+
+### Migration Path
+
+**Phase 1**: Add stream metadata to existing login response (backward compatible)
+**Phase 2**: Implement incremental stream syncing
+**Phase 3**: Full stream-based dashboard with device registry
+**Phase 4**: Real-time stream updates via WebSocket
+
 ## Streams vs Devices: Scalable Architecture Logic
 
 The relationship between streams and devices is fundamental to this extensible architecture, working together to scale from personal devices to industrial systems:
